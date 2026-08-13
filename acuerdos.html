@@ -86,10 +86,12 @@ nav.tabbar button .ic{font-size:18px}
 .badge.cumplido{background:var(--success-soft);color:var(--success)}
 .badge.incumplido{background:var(--danger-soft);color:var(--danger)}
 .badge.vencido{background:var(--danger-soft);color:var(--danger)}
+.badge.evento{background:var(--accent2-soft);color:var(--accent2)}
 
 .alerta{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--radius);margin-bottom:10px;font-size:14px;font-weight:600;cursor:pointer}
 .alerta.danger{background:var(--danger-soft);color:var(--danger)}
 .alerta.warn{background:var(--warn-soft);color:var(--warn)}
+.alerta.evento{background:var(--accent2-soft);color:var(--accent2)}
 .alerta.ok{background:var(--success-soft);color:var(--success);cursor:default;font-weight:500}
 
 .ac-card{display:flex;gap:10px;align-items:flex-start;padding:12px 12px;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow);margin-bottom:10px;border-left:5px solid var(--border);cursor:pointer}
@@ -98,6 +100,7 @@ nav.tabbar button .ic{font-size:18px}
 .ac-card.u-pendiente{border-left-color:var(--accent)}
 .ac-card.u-cumplido{border-left-color:var(--success);opacity:.85}
 .ac-card.u-incumplido{border-left-color:var(--danger);opacity:.85}
+.ac-card.u-evento{border-left-color:var(--accent2)}
 .ac-card .cat-em{font-size:22px;flex:none}
 .ac-card .info{flex:1;min-width:0}
 .ac-card .titulo{font-weight:700;font-size:15px}
@@ -128,6 +131,7 @@ nav.tabbar button .ic{font-size:18px}
 .dot.d-vencido,.dot.d-incumplido{background:var(--danger)}
 .dot.d-proximo,.dot.d-pendiente{background:var(--warn)}
 .dot.d-cumplido{background:var(--success)}
+.dot.d-evento{background:var(--accent2)}
 
 .mini-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
 .mini-row:last-child{border-bottom:none}
@@ -151,6 +155,9 @@ nav.tabbar button .ic{font-size:18px}
 .mejora-row .fecha{font-size:11px;color:var(--text-soft);margin-top:2px}
 
 .inline-add{display:flex;gap:6px;margin-top:6px}
+.check-list{border:1px solid var(--border);border-radius:10px;padding:6px 10px;max-height:160px;overflow-y:auto}
+.chk-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px}
+.chk-row input[type=checkbox]{width:auto;flex:none}
 </style>
 </head>
 <body>
@@ -192,13 +199,14 @@ nav.tabbar button .ic{font-size:18px}
     </div>
 
     <div id="screen-acuerdos" class="screen">
-      <h2>🤝 Acuerdos</h2>
-      <div class="searchbar"><input type="text" id="acBuscar" placeholder="Buscar acuerdo…" oninput="renderAcuerdos()"></div>
+      <h2>🤝 Acuerdos y eventos</h2>
+      <div class="searchbar"><input type="text" id="acBuscar" placeholder="Buscar…" oninput="renderAcuerdos()"></div>
+      <div class="chips" id="acChipsTipo"></div>
       <div class="chips" id="acChipsEstado"></div>
       <div class="chips" id="acChipsCategoria"></div>
       <select id="acFiltroPersona" onchange="renderAcuerdos()"></select>
       <div id="acLista" style="margin-top:12px"></div>
-      <button class="btn block" style="margin-top:14px" onclick="abrirEditorAcuerdo(null)">➕ Nuevo acuerdo</button>
+      <button class="btn block" style="margin-top:14px" onclick="abrirEditorAcuerdo(null)">➕ Nuevo</button>
     </div>
 
     <div id="screen-calendario" class="screen">
@@ -292,6 +300,8 @@ let usuarioActivo = null;
 
 let filtroEstado = 'todos';
 let filtroCategoria = 'todas';
+let filtroTipo = 'todos';
+const TIPO_LABEL = { acuerdo:'🤝 Acuerdo', evento:'🎉 Evento' };
 let calMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let calDiaSel = null;
 
@@ -589,7 +599,10 @@ function cambiarUsuario(){
 function personasActivas(){ return DATA.personas.filter(p=>!esVerdadero(p.Papelera)).sort((a,b)=>a.Nombre.localeCompare(b.Nombre,'es')); }
 function findPersona(id){ return DATA.personas.find(p=>p.ID===id); }
 function nombrePersona(id){ const p=findPersona(id); return p ? p.Nombre : (id ? '(persona eliminada)' : '—'); }
-function contarUsoPersona(id){ return acuerdosActivos().filter(a=>a.Quien===id||a.ConQuien===id).length; }
+// Quien puede traer varios IDs separados por coma (compromiso de "ambos").
+function idsFromField(str){ return String(str||'').split(',').map(s=>s.trim()).filter(Boolean); }
+function nombrePersonas(str){ const ids=idsFromField(str); return ids.length ? ids.map(nombrePersona).join(' y ') : '—'; }
+function contarUsoPersona(id){ return acuerdosActivos().filter(a=>idsFromField(a.Quien).includes(id)||a.ConQuien===id).length; }
 
 function categoriasOrdenadas(){ return DATA.categorias.filter(c=>!esVerdadero(c.Papelera)).sort((a,b)=>(Number(a.Orden)||0)-(Number(b.Orden)||0)); }
 function findCategoria(id){ return DATA.categorias.find(c=>c.ID===id); }
@@ -601,9 +614,12 @@ function contarUsoCategoria(id){ return acuerdosActivos().filter(a=>a.Categoria=
 //  Acuerdos — helpers
 // ============================================================
 function acuerdosActivos(){ return DATA.acuerdos.filter(a=>!esVerdadero(a.Papelera)); }
-function esVencido(a){ return a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) < 0; }
-function esProximo(a){ return a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) >= 0 && diasEntre(a.FechaLimite) <= 7; }
+function esEvento(a){ return a.Tipo==='evento'; }
+function esVencido(a){ return !esEvento(a) && a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) < 0; }
+function esProximo(a){ return !esEvento(a) && a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) >= 0 && diasEntre(a.FechaLimite) <= 7; }
+function esEventoProximo(a){ return esEvento(a) && a.FechaLimite && diasEntre(a.FechaLimite) >= 0 && diasEntre(a.FechaLimite) <= 7; }
 function urgenciaClase(a){
+  if(esEvento(a)) return 'evento';
   if(a.Estado==='cumplido') return 'cumplido';
   if(a.Estado==='incumplido') return 'incumplido';
   if(esVencido(a)) return 'vencido';
@@ -611,6 +627,7 @@ function urgenciaClase(a){
   return 'pendiente';
 }
 function estadoLabel(a){
+  if(esEvento(a)) return { texto:'Evento', clase:'evento' };
   if(a.Estado==='cumplido') return { texto:'Cumplido', clase:'cumplido' };
   if(a.Estado==='incumplido') return { texto:'Incumplido', clase:'incumplido' };
   if(esVencido(a)) return { texto:'Vencido', clase:'vencido' };
@@ -632,7 +649,7 @@ function acCardHtml(a){
     <div class="cat-em">${emojiCategoria(a.Categoria)}</div>
     <div class="info">
       <div class="titulo">${escAttr(a.Titulo)}</div>
-      <div class="personas">${escAttr(nombrePersona(a.Quien))}${conQuien}</div>
+      <div class="personas">${escAttr(nombrePersonas(a.Quien))}${conQuien}</div>
       <div class="meta">
         <span class="fecha ${fechaClase}">📅 ${fmtFecha(a.FechaLimite)} · ${fechaRelativa(a.FechaLimite)}</span>
         <span class="badge ${est.clase}">${est.texto}</span>
@@ -649,11 +666,13 @@ function renderInicio(){
   const activos = acuerdosActivos();
   const vencidos = activos.filter(esVencido);
   const proximos = activos.filter(esProximo);
+  const eventosProximos = activos.filter(esEventoProximo);
   const alertas = document.getElementById('inicioAlertas');
   let html = '';
   if(vencidos.length) html += `<div class="alerta danger" onclick="irAFiltro('vencido')">🔴 ${vencidos.length} acuerdo${vencidos.length>1?'s':''} vencido${vencidos.length>1?'s':''} sin cumplir</div>`;
   if(proximos.length) html += `<div class="alerta warn" onclick="irAFiltro('proximo')">🟡 ${proximos.length} por vencer en los próximos 7 días</div>`;
-  if(!vencidos.length && !proximos.length) html = `<div class="alerta ok">🟢 Todo al día — no hay acuerdos vencidos ni por vencer.</div>`;
+  if(eventosProximos.length) html += `<div class="alerta evento" onclick="irAFiltro('todos','evento')">🎉 ${eventosProximos.length} evento${eventosProximos.length>1?'s':''} esta semana</div>`;
+  if(!vencidos.length && !proximos.length && !eventosProximos.length) html = `<div class="alerta ok">🟢 Todo al día — no hay acuerdos vencidos ni por vencer.</div>`;
   alertas.innerHTML = html;
 
   const marcador = calcularMarcador();
@@ -673,17 +692,19 @@ function renderInicio(){
   contR.innerHTML = recientes.length ? recientes.map(a=>`
     <div class="mini-row" onclick="abrirDetalleAcuerdo('${a.ID}')">
       <span class="em">${emojiCategoria(a.Categoria)}</span>
-      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersona(a.Quien))} · ${fmtFecha(a.FechaLimite)}</div></div>
+      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersonas(a.Quien))} · ${fmtFecha(a.FechaLimite)}</div></div>
       <span class="badge ${estadoLabel(a).clase}">${estadoLabel(a).texto}</span>
-    </div>`).join('') : '<p class="hint">Todavía no has agregado ningún acuerdo.</p>';
+    </div>`).join('') : '<p class="hint">Todavía no has agregado nada.</p>';
 }
 function calcularMarcador(){
   const stats = {};
   acuerdosActivos().forEach(a=>{
+    if(esEvento(a)) return;
     if(a.Estado==='cumplido' || a.Estado==='incumplido'){
-      const id = a.Quien; if(!id) return;
-      if(!stats[id]) stats[id] = { cumplidos:0, incumplidos:0 };
-      stats[id][a.Estado==='cumplido'?'cumplidos':'incumplidos']++;
+      idsFromField(a.Quien).forEach(id=>{
+        if(!stats[id]) stats[id] = { cumplidos:0, incumplidos:0 };
+        stats[id][a.Estado==='cumplido'?'cumplidos':'incumplidos']++;
+      });
     }
   });
   return Object.keys(stats).map(id=>{
@@ -691,8 +712,8 @@ function calcularMarcador(){
     return { id, nombre: nombrePersona(id), cumplidos:s.cumplidos, incumplidos:s.incumplidos, total, pct: total ? Math.round(s.cumplidos/total*100) : 0 };
   }).sort((a,b)=>b.total-a.total);
 }
-function irAFiltro(estado){
-  filtroEstado = estado; filtroCategoria = 'todas';
+function irAFiltro(estado, tipo){
+  filtroEstado = estado; filtroCategoria = 'todas'; filtroTipo = tipo || 'todos';
   switchTab('acuerdos');
 }
 
@@ -704,7 +725,11 @@ const CHIPS_ESTADO = [
   { v:'vencido', label:'Vencidos' }, { v:'proximo', label:'Por vencer' },
   { v:'cumplido', label:'Cumplidos' }, { v:'incumplido', label:'Incumplidos' }
 ];
+const CHIPS_TIPO = [
+  { v:'todos', label:'Todos' }, { v:'acuerdo', label:'🤝 Acuerdos' }, { v:'evento', label:'🎉 Eventos' }
+];
 function pasaFiltroEstado(a){
+  if(esEvento(a)) return filtroEstado==='todos' || filtroEstado==='pendiente';
   if(filtroEstado==='todos') return true;
   if(filtroEstado==='pendiente') return a.Estado==='pendiente';
   if(filtroEstado==='vencido') return esVencido(a);
@@ -713,7 +738,10 @@ function pasaFiltroEstado(a){
   if(filtroEstado==='incumplido') return a.Estado==='incumplido';
   return true;
 }
+function pasaFiltroTipo(a){ return filtroTipo==='todos' || a.Tipo===filtroTipo; }
 function renderAcuerdos(){
+  document.getElementById('acChipsTipo').innerHTML = CHIPS_TIPO.map(c=>
+    `<button class="chip ${filtroTipo===c.v?'active':''}" onclick="filtroTipo='${c.v}';renderAcuerdos()">${c.label}</button>`).join('');
   document.getElementById('acChipsEstado').innerHTML = CHIPS_ESTADO.map(c=>
     `<button class="chip ${filtroEstado===c.v?'active':''}" onclick="filtroEstado='${c.v}';renderAcuerdos()">${c.label}</button>`).join('');
   const cats = categoriasOrdenadas();
@@ -728,9 +756,9 @@ function renderAcuerdos(){
   selPersona.value = valPrevio;
 
   const buscar = (document.getElementById('acBuscar').value||'').toLowerCase().trim();
-  let lista = acuerdosActivos().filter(pasaFiltroEstado);
+  let lista = acuerdosActivos().filter(pasaFiltroEstado).filter(pasaFiltroTipo);
   if(filtroCategoria!=='todas') lista = lista.filter(a=>a.Categoria===filtroCategoria);
-  if(selPersona.value!=='todas') lista = lista.filter(a=>a.Quien===selPersona.value || a.ConQuien===selPersona.value);
+  if(selPersona.value!=='todas') lista = lista.filter(a=>idsFromField(a.Quien).includes(selPersona.value) || a.ConQuien===selPersona.value);
   if(buscar) lista = lista.filter(a=>(a.Titulo||'').toLowerCase().includes(buscar) || (a.Detalles||'').toLowerCase().includes(buscar));
 
   lista = ordenarAcuerdos(lista);
@@ -748,20 +776,59 @@ function poblarSelectPersonas(selectEl, selectedId){
   selectEl.innerHTML = `<option value="">— Elegir —</option>` + todas.map(p=>`<option value="${p.ID}">${escAttr(p.Nombre)}</option>`).join('');
   selectEl.value = selectedId || '';
 }
+function poblarCheckListPersonas(containerEl, selectedIds){
+  const activas = personasActivas();
+  const extraIds = selectedIds.filter(id=>!activas.find(p=>p.ID===id));
+  const extra = extraIds.map(findPersona).filter(Boolean);
+  const todas = activas.concat(extra);
+  containerEl.innerHTML = todas.map(p=>`<label class="chk-row"><input type="checkbox" value="${p.ID}" ${selectedIds.includes(p.ID)?'checked':''}> ${escAttr(p.Nombre)}</label>`).join('') || '<p class="hint">Todavía no hay personas — agrega una abajo.</p>';
+}
+function checklistValores(containerEl){
+  return Array.from(containerEl.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
+}
+// "Ambos" = las personas que además son Usuarios de la app (la pareja que
+// la usa), no todo el catálogo de Personas (que puede incluir hijos,
+// suegra, etc.). Empareja por nombre — para que funcione, agrega en
+// Personas a la misma gente que tienes en Usuarios, con el mismo nombre.
+function marcarAmbos(){
+  const nombresUsuarios = usuariosActivos().map(u=>u.Nombre.trim().toLowerCase());
+  let marcados = 0;
+  document.querySelectorAll('#edQuienList .chk-row').forEach(fila=>{
+    const nombre = fila.textContent.trim().toLowerCase();
+    if(nombresUsuarios.includes(nombre)){ fila.querySelector('input[type=checkbox]').checked = true; marcados++; }
+  });
+  if(!marcados) showToast('Agrega en Personas a alguien con el mismo nombre que tus Usuarios para usar este atajo');
+}
+function onTipoChange(){
+  const tipo = document.getElementById('edTipo').value;
+  document.getElementById('edFechaLabel').textContent = tipo==='evento' ? 'Fecha del evento' : 'Fecha límite';
+  document.getElementById('edEstadoNota').classList.toggle('hidden', tipo!=='evento');
+}
 function abrirEditorAcuerdo(id, fechaSugerida){
   const a = id ? DATA.acuerdos.find(x=>x.ID===id) : null;
   const cats = categoriasOrdenadas();
+  const tipoInicial = a ? a.Tipo : (filtroTipo==='evento' ? 'evento' : 'acuerdo');
   const html = `
-    <h3>${a?'✏️ Editar acuerdo':'➕ Nuevo acuerdo'}</h3>
+    <h3>${a?'✏️ Editar':'➕ Nuevo'}</h3>
+    <div class="field"><label>Tipo</label>
+      <select id="edTipo" onchange="onTipoChange()">
+        <option value="acuerdo" ${tipoInicial==='acuerdo'?'selected':''}>🤝 Acuerdo (con seguimiento de cumplido/incumplido)</option>
+        <option value="evento" ${tipoInicial==='evento'?'selected':''}>🎉 Evento / plan (solo fecha, sin seguimiento)</option>
+      </select>
+      <p class="hint" id="edEstadoNota" style="margin-top:4px">Los eventos no llevan cumplido/incumplido, solo aparecen en el calendario.</p>
+    </div>
     <div class="field"><label>Título</label><input type="text" id="edTitulo" value="${a?escAttr(a.Titulo):''}" placeholder="ej: Sacar la basura los martes"></div>
     <div class="field"><label>Categoría</label>
       <select id="edCategoria"><option value="">— Sin categoría —</option>${cats.map(c=>`<option value="${c.ID}" ${a&&a.Categoria===c.ID?'selected':''}>${c.Emoji} ${escAttr(c.Nombre)}</option>`).join('')}</select>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Quién se compromete</label>
-        <select id="edQuien"></select>
-        <button type="button" class="btn ghost small" style="margin-top:6px" onclick="mostrarAgregarPersonaInline('edQuien')">➕ Nueva persona</button>
+        <label>Quién se compromete / participa</label>
+        <div id="edQuienList" class="check-list"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <button type="button" class="btn ghost small" onclick="marcarAmbos()">👫 Ambos</button>
+          <button type="button" class="btn ghost small" onclick="mostrarAgregarPersonaInline('edQuien')">➕ Nueva persona</button>
+        </div>
         <div id="edQuienInline"></div>
       </div>
       <div class="field">
@@ -772,7 +839,7 @@ function abrirEditorAcuerdo(id, fechaSugerida){
       </div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Fecha límite</label><input type="date" id="edFecha" value="${a?a.FechaLimite:(fechaSugerida||'')}"></div>
+      <div class="field"><label id="edFechaLabel">Fecha límite</label><input type="date" id="edFecha" value="${a?a.FechaLimite:(fechaSugerida||'')}"></div>
       <div class="field"><label>Recurrencia</label>
         <select id="edRecurrencia">
           <option value="">Ninguna</option>
@@ -789,47 +856,53 @@ function abrirEditorAcuerdo(id, fechaSugerida){
       <button class="btn" onclick="guardarAcuerdo(${a?`'${a.ID}'`:'null'})">💾 Guardar</button>
     </div>`;
   const overlay = abrirModal(html, {confirmarCierre:true});
-  poblarSelectPersonas(overlay.querySelector('#edQuien'), a?a.Quien:null);
+  poblarCheckListPersonas(overlay.querySelector('#edQuienList'), a?idsFromField(a.Quien):[]);
   poblarSelectPersonas(overlay.querySelector('#edConQuien'), a?a.ConQuien:null);
   if(a) overlay.querySelector('#edRecurrencia').value = a.Recurrencia||'';
+  onTipoChange();
 }
-function mostrarAgregarPersonaInline(selectId){
-  const cont = document.getElementById(selectId+'Inline');
+function mostrarAgregarPersonaInline(fieldId){
+  const cont = document.getElementById(fieldId+'Inline');
   cont.innerHTML = `<div class="inline-add">
-    <input type="text" id="${selectId}NuevoNombre" placeholder="Nombre de la persona">
-    <button type="button" class="btn small" style="flex:none" onclick="confirmarPersonaInline('${selectId}')">✓</button>
+    <input type="text" id="${fieldId}NuevoNombre" placeholder="Nombre de la persona">
+    <button type="button" class="btn small" style="flex:none" onclick="confirmarPersonaInline('${fieldId}')">✓</button>
   </div>`;
-  document.getElementById(selectId+'NuevoNombre').focus();
+  document.getElementById(fieldId+'NuevoNombre').focus();
 }
-async function confirmarPersonaInline(selectId){
-  const input = document.getElementById(selectId+'NuevoNombre');
+async function confirmarPersonaInline(fieldId){
+  const input = document.getElementById(fieldId+'NuevoNombre');
   const nombre = input.value.trim();
   if(!nombre){ showToast('Escribe un nombre'); return; }
   const row = { ID: uid(), Nombre: nombre, Papelera:false, FechaPapelera:'' };
   DATA.personas.push(row);
   localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
-  document.getElementById(selectId+'Inline').innerHTML = '';
-  ['edQuien','edConQuien'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el){ const actual = el.value; poblarSelectPersonas(el, id===selectId ? row.ID : (actual||null)); }
-  });
+  document.getElementById(fieldId+'Inline').innerHTML = '';
+  if(fieldId==='edQuien'){
+    const cont = document.getElementById('edQuienList');
+    const yaMarcados = checklistValores(cont);
+    poblarCheckListPersonas(cont, yaMarcados.concat([row.ID]));
+  } else {
+    const el = document.getElementById(fieldId);
+    if(el) poblarSelectPersonas(el, row.ID);
+  }
   await apiPost('saveRow', { table:'PERSONAS', row });
 }
 async function guardarAcuerdo(id){
   const titulo = document.getElementById('edTitulo').value.trim();
-  const quien = document.getElementById('edQuien').value;
+  const quienes = checklistValores(document.getElementById('edQuienList'));
   const fecha = document.getElementById('edFecha').value;
   const err = document.getElementById('edErr');
   if(!titulo){ err.textContent = 'Escribe un título'; return; }
-  if(!quien){ err.textContent = 'Elige quién se compromete'; return; }
-  if(!fecha){ err.textContent = 'Elige una fecha límite'; return; }
+  if(!quienes.length){ err.textContent = 'Elige quién se compromete (puedes marcar más de uno)'; return; }
+  if(!fecha){ err.textContent = 'Elige una fecha'; return; }
 
   const existente = id ? DATA.acuerdos.find(x=>x.ID===id) : null;
   const row = {
     ID: id || uid(),
+    Tipo: document.getElementById('edTipo').value,
     Titulo: titulo,
     Detalles: document.getElementById('edDetalles').value.trim(),
-    Quien: quien,
+    Quien: quienes.join(','),
     ConQuien: document.getElementById('edConQuien').value,
     Categoria: document.getElementById('edCategoria').value,
     FechaLimite: fecha,
@@ -859,22 +932,22 @@ function abrirDetalleAcuerdo(id){
   const est = estadoLabel(a);
   const conQuien = a.ConQuien ? `<p><b>Con quién:</b> ${escAttr(nombrePersona(a.ConQuien))}</p>` : '';
   const detalles = a.Detalles ? `<p><b>Detalles:</b> ${escAttr(a.Detalles)}</p>` : '';
-  const resuelto = a.Estado!=='pendiente' ? `<p><b>Resuelto:</b> ${fmtFecha(a.FechaCumplimiento)}</p>` : '';
+  const resuelto = (!esEvento(a) && a.Estado!=='pendiente') ? `<p><b>Resuelto:</b> ${fmtFecha(a.FechaCumplimiento)}</p>` : '';
   const recurrente = a.Recurrencia ? `<p><b>Recurrencia:</b> 🔁 ${RECURRENCIA_LABEL[a.Recurrencia]}</p>` : '';
-  const botonesEstado = a.Estado==='pendiente'
+  const botonesEstado = esEvento(a) ? '' : (a.Estado==='pendiente'
     ? `<button class="btn success" onclick="marcarEstadoAcuerdo('${a.ID}','cumplido')">✅ Marcar cumplido</button>
        <button class="btn danger" onclick="marcarEstadoAcuerdo('${a.ID}','incumplido')">❌ Marcar incumplido</button>`
-    : `<button class="btn ghost" onclick="marcarEstadoAcuerdo('${a.ID}','pendiente')">↩️ Volver a pendiente</button>`;
+    : `<button class="btn ghost" onclick="marcarEstadoAcuerdo('${a.ID}','pendiente')">↩️ Volver a pendiente</button>`);
   const html = `
     <h3>${escAttr(a.Titulo)} <span class="badge ${est.clase}">${est.texto}</span></h3>
     <p>${emojiCategoria(a.Categoria)} ${escAttr(nombreCategoria(a.Categoria)||'Sin categoría')}</p>
-    <p><b>Quién:</b> ${escAttr(nombrePersona(a.Quien))}</p>
+    <p><b>Quién:</b> ${escAttr(nombrePersonas(a.Quien))}</p>
     ${conQuien}
-    <p><b>Fecha límite:</b> ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</p>
+    <p><b>${esEvento(a)?'Fecha':'Fecha límite'}:</b> ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</p>
     ${resuelto}
     ${recurrente}
     ${detalles}
-    <div class="actions" style="justify-content:flex-start">${botonesEstado}</div>
+    ${botonesEstado ? `<div class="actions" style="justify-content:flex-start">${botonesEstado}</div>` : ''}
     <div class="actions">
       <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cerrar</button>
       <button class="btn plum" onclick="cerrarModales();abrirEditorAcuerdo('${a.ID}')">✏️ Editar</button>
@@ -937,6 +1010,7 @@ function renderCalendario(){
     const iso = calMes.getFullYear()+'-'+String(calMes.getMonth()+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
     const delDia = acuerdosDelDia(iso);
     const dotsSet = new Set(delDia.map(a=>{
+      if(esEvento(a)) return 'evento';
       if(a.Estado==='cumplido') return 'cumplido';
       if(a.Estado==='incumplido') return 'incumplido';
       return esVencido(a) ? 'vencido' : (esProximo(a) ? 'proximo' : 'pendiente');
@@ -964,7 +1038,7 @@ function renderCalendario(){
   document.getElementById('calProximos').innerHTML = proximos.length ? proximos.map(a=>`
     <div class="mini-row" onclick="abrirDetalleAcuerdo('${a.ID}')">
       <span class="em">${emojiCategoria(a.Categoria)}</span>
-      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersona(a.Quien))} · ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</div></div>
+      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersonas(a.Quien))} · ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</div></div>
     </div>`).join('') : '<p class="hint">No hay nada próximo agendado.</p>';
 }
 function seleccionarDia(iso){ calDiaSel = (calDiaSel===iso) ? null : iso; renderCalendario(); }
