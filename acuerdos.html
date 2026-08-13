@@ -270,17 +270,10 @@ nav.tabbar button .ic{font-size:18px}
 
       <div class="card"><div class="body">
         <h3>🔔 Notificaciones</h3>
-        <div id="cfgNotifSinConfigurar" class="hidden">
-          <p class="hint">Falta un solo dato (una sola vez): la clave VAPID de tu proyecto de Firebase — Configuración del proyecto ▸ Cloud Messaging ▸ Certificados push web.</p>
-          <div class="field"><label>Clave VAPID</label><input type="text" id="cfgVapidKey" placeholder="BN...."></div>
-          <button class="btn secondary" onclick="guardarFirebaseConfigUI()">💾 Guardar</button>
-        </div>
-        <div id="cfgNotifConfigurada" class="hidden">
-          <p class="hint" id="cfgNotifEstado">Configurado.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" onclick="activarNotificaciones()" id="cfgBtnActivarNotif">🔔 Activar en este dispositivo</button>
-            <button class="btn ghost small" onclick="borrarFirebaseConfigUI()">🗑 Quitar configuración</button>
-          </div>
+        <p class="hint" id="cfgNotifEstado">Activa los avisos en este dispositivo para enterarte aunque no tengas la app abierta.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="activarNotificaciones()" id="cfgBtnActivarNotif">🔔 Activar en este dispositivo</button>
+          <button class="btn ghost small" onclick="borrarFirebaseConfigUI()">🗑 Desactivar aquí</button>
         </div>
       </div></div>
 
@@ -1341,41 +1334,20 @@ const DEFAULT_FIREBASE_CONFIG = {
   messagingSenderId: "435781810013",
   appId: "1:435781810013:web:8e3cb395964d204dea5ab4"
 };
-function cargarFirebaseConfig(){
-  try{
-    const guardada = JSON.parse(localStorage.getItem('acuerdos_firebase_config')||'null');
-    return guardada || DEFAULT_FIREBASE_CONFIG;
-  }catch(e){ return DEFAULT_FIREBASE_CONFIG; }
-}
+// Clave pública del par VAPID (Cloud Messaging ▸ Certificados push web) —
+// tampoco es secreta, es la mitad pública del par de claves.
+const DEFAULT_VAPID_KEY = "BJ8jWRiTDq5h1ZLBbvWArZQUpSphvtq2z-MohawI5N8k0d8Qlhwwh1JHI1qsBon7OLvJAkYmpMUy-2p95OLCGFM";
+function cargarFirebaseConfig(){ return DEFAULT_FIREBASE_CONFIG; }
 function renderConfigNotificaciones(){
-  const cfg = cargarFirebaseConfig();
-  const vapid = localStorage.getItem('acuerdos_vapid_key');
-  const sinConfigurar = document.getElementById('cfgNotifSinConfigurar');
-  const configurada = document.getElementById('cfgNotifConfigurada');
-  if(cfg && vapid){
-    sinConfigurar.classList.add('hidden');
-    configurada.classList.remove('hidden');
-    const activo = !!localStorage.getItem('acuerdos_push_token');
-    document.getElementById('cfgNotifEstado').textContent = activo ? '✅ Activadas en este dispositivo.' : 'Configurado — falta activarlas en este dispositivo.';
-    document.getElementById('cfgBtnActivarNotif').textContent = activo ? '🔔 Ya activadas (volver a activar)' : '🔔 Activar en este dispositivo';
-  } else {
-    sinConfigurar.classList.remove('hidden');
-    configurada.classList.add('hidden');
-  }
-}
-function guardarFirebaseConfigUI(){
-  const vapid = document.getElementById('cfgVapidKey').value.trim();
-  if(!vapid){ showToast('Falta la clave VAPID'); return; }
-  localStorage.setItem('acuerdos_vapid_key', vapid);
-  showToast('Guardado');
-  renderConfigNotificaciones();
+  const activo = !!localStorage.getItem('acuerdos_push_token');
+  document.getElementById('cfgNotifEstado').textContent = activo ? '✅ Activadas en este dispositivo.' : 'Activa los avisos en este dispositivo para enterarte aunque no tengas la app abierta.';
+  document.getElementById('cfgBtnActivarNotif').textContent = activo ? '🔔 Ya activadas (volver a activar)' : '🔔 Activar en este dispositivo';
 }
 function borrarFirebaseConfigUI(){
-  confirmarEliminar('Se quita la configuración de Firebase de este dispositivo (las notificaciones dejan de llegar aquí).', ()=>{
-    localStorage.removeItem('acuerdos_firebase_config');
-    localStorage.removeItem('acuerdos_vapid_key');
+  confirmarEliminar('Se desactivan las notificaciones en este dispositivo.', ()=>{
     localStorage.removeItem('acuerdos_push_token');
     renderConfigNotificaciones();
+    showToast('Desactivadas en este dispositivo');
   });
 }
 function cargarFirebaseSDK(){
@@ -1395,8 +1367,7 @@ function cargarFirebaseSDK(){
 }
 async function activarNotificaciones(){
   const cfg = cargarFirebaseConfig();
-  const vapid = localStorage.getItem('acuerdos_vapid_key');
-  if(!cfg || !vapid){ showToast('Primero guarda la configuración de Firebase'); return; }
+  const vapid = DEFAULT_VAPID_KEY;
   if(!('Notification' in window) || !('serviceWorker' in navigator)){ showToast('Este navegador no soporta notificaciones'); return; }
   const btn = document.getElementById('cfgBtnActivarNotif');
   btn.disabled = true; btn.textContent = 'Activando…';
