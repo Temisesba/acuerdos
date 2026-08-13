@@ -275,6 +275,7 @@ nav.tabbar button .ic{font-size:18px}
           <button class="btn" onclick="activarNotificaciones()" id="cfgBtnActivarNotif">🔔 Activar en este dispositivo</button>
           <button class="btn ghost small" onclick="borrarFirebaseConfigUI()">🗑 Desactivar aquí</button>
         </div>
+        <button class="btn ghost small" style="margin-top:8px" onclick="probarNotificacionesAhora()">🧪 Probar notificaciones ahora</button>
       </div></div>
 
       <div class="card"><div class="body">
@@ -1349,6 +1350,17 @@ function borrarFirebaseConfigUI(){
     renderConfigNotificaciones();
     showToast('Desactivadas en este dispositivo');
   });
+}
+// Dispara ya mismo el mismo chequeo que corre solo todos los días a las
+// 8am — útil para probar sin esperar, y para confirmar que las
+// Propiedades del script de FCM están bien puestas.
+async function probarNotificacionesAhora(){
+  showToast('Revisando y enviando…');
+  const r = await apiPost('revisarYNotificar', {});
+  if(!r || !r.ok){ showToast('Error: '+((r&&r.error)||'sin conexión')); return; }
+  if(!r.dispositivos) showToast('No hay ningún dispositivo con notificaciones activadas todavía');
+  else if(!r.avisos) showToast('No hay nada que venza hoy o mañana para avisar');
+  else showToast(`Enviado a ${r.dispositivos} dispositivo(s), ${r.avisos} aviso(s)`);
 }
 function cargarFirebaseSDK(){
   return new Promise((resolve, reject)=>{
