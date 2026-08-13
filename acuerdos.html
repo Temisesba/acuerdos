@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acuerdos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f6f78">
+<style>
+:root{
+  --bg:#faf8f4; --bg-card:#ffffff; --text:#22302f; --text-soft:#6b7d7a;
+  --accent:#1f6f78; --accent-soft:#dcecec;
+  --accent2:#7a4a68; --accent2-soft:#f1e3ec;
+  --border:#e3e6e2;
+  --danger:#b3413a; --danger-soft:#f6dedb; --success:#2f7a4f; --success-soft:#dcefe2;
+  --warn:#b8860b; --warn-soft:#f5ecd2;
+  --radius:14px; --shadow:0 2px 10px rgba(30,50,45,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#161d1c; --bg-card:#1f2a28; --text:#eef3f1; --text-soft:#9fb0ac; --accent:#4fb3ae; --accent-soft:#20302e; --accent2:#c98bb0; --accent2-soft:#33232e; --border:#2c3a37; --danger-soft:#3a2422; --success-soft:#1c3226; --warn-soft:#33290f; }
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);padding-bottom:76px}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:9px 11px;width:100%}
+button{cursor:pointer}
+.hidden{display:none!important}
+h1,h2,h3{margin:0 0 8px}
+.hint{color:var(--text-soft);font-size:13px}
+
+#setupScreen,#userScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.setup-card{max-width:420px;width:100%;background:var(--bg-card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+.setup-card label{display:block;margin:14px 0 4px;font-size:13px;color:var(--text-soft)}
+.setup-err{color:var(--danger);font-size:13px;margin-top:8px;min-height:16px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:600}
+.btn.secondary{background:var(--accent-soft);color:var(--accent)}
+.btn.plum{background:var(--accent2-soft);color:var(--accent2)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.success{background:var(--success);color:#fff}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn.ghost.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.block{width:100%;text-align:center}
+.btn.small{font-size:12px;padding:6px 10px}
+.user-pick{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.user-pick button{background:var(--accent-soft);color:var(--accent);border:none;border-radius:10px;padding:12px 14px;font-weight:600;text-align:left;display:flex;justify-content:space-between;align-items:center}
+
+header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+header .brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px}
+header .userbtn{background:var(--accent-soft);color:var(--accent);border:none;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+#connBanner{background:var(--danger-soft);color:var(--danger);font-size:13px;text-align:center;padding:6px;display:none}
+#connBanner.show{display:block}
+main{max-width:900px;margin:0 auto;padding:16px}
+.screen{display:none}
+.screen.active{display:block}
+
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--bg-card);border-top:1px solid var(--border);padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+nav.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:6px 1px;border-radius:10px;color:var(--text-soft);font-size:10px}
+nav.tabbar button.active{color:var(--accent);background:var(--accent-soft)}
+nav.tabbar button .ic{font-size:18px}
+
+.card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.card .body{padding:14px 14px 16px}
+
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin:10px 0}
+.chip{flex:none;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);font-size:13px;white-space:nowrap}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.searchbar{display:flex;gap:8px}
+.searchbar input{flex:1}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(20,25,24,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--bg-card);border-radius:var(--radius);padding:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:var(--shadow)}
+.modal h3{margin-bottom:12px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:13px;color:var(--text-soft);margin-bottom:4px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.confirm-modal p{margin:0 0 4px}
+.field-row{display:flex;gap:8px}
+.field-row .field{flex:1}
+
+#toast{position:fixed;left:50%;bottom:88px;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:88vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.badge.pendiente{background:var(--warn-soft);color:var(--warn)}
+.badge.cumplido{background:var(--success-soft);color:var(--success)}
+.badge.incumplido{background:var(--danger-soft);color:var(--danger)}
+.badge.vencido{background:var(--danger-soft);color:var(--danger)}
+
+.alerta{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--radius);margin-bottom:10px;font-size:14px;font-weight:600;cursor:pointer}
+.alerta.danger{background:var(--danger-soft);color:var(--danger)}
+.alerta.warn{background:var(--warn-soft);color:var(--warn)}
+.alerta.ok{background:var(--success-soft);color:var(--success);cursor:default;font-weight:500}
+
+.ac-card{display:flex;gap:10px;align-items:flex-start;padding:12px 12px;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow);margin-bottom:10px;border-left:5px solid var(--border);cursor:pointer}
+.ac-card.u-vencido{border-left-color:var(--danger)}
+.ac-card.u-proximo{border-left-color:var(--warn)}
+.ac-card.u-pendiente{border-left-color:var(--accent)}
+.ac-card.u-cumplido{border-left-color:var(--success);opacity:.85}
+.ac-card.u-incumplido{border-left-color:var(--danger);opacity:.85}
+.ac-card .cat-em{font-size:22px;flex:none}
+.ac-card .info{flex:1;min-width:0}
+.ac-card .titulo{font-weight:700;font-size:15px}
+.ac-card .personas{font-size:12.5px;color:var(--text-soft);margin-top:2px}
+.ac-card .meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.ac-card .fecha{font-size:12px;color:var(--text-soft)}
+.ac-card .fecha.u-vencido{color:var(--danger);font-weight:700}
+.ac-card .fecha.u-proximo{color:var(--warn);font-weight:700}
+
+.persona-card{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.persona-card:last-child{border-bottom:none}
+.persona-card .nombre{flex:1;font-weight:600;font-size:14px}
+.persona-card .barra{width:100%;height:8px;border-radius:99px;background:var(--border);margin-top:4px;overflow:hidden}
+.persona-card .barra-fill{height:100%;background:var(--success)}
+.persona-card .pct{font-weight:700;font-size:15px;width:44px;text-align:right;flex:none}
+.persona-card .sub{font-size:11.5px;color:var(--text-soft)}
+
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-titulo{font-weight:700;font-size:16px;text-transform:capitalize}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:11px;color:var(--text-soft);font-weight:700;padding-bottom:4px}
+.cal-cell{aspect-ratio:1;border-radius:10px;background:var(--bg-card);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;position:relative;cursor:pointer;border:1px solid transparent}
+.cal-cell.vacio{background:transparent;cursor:default}
+.cal-cell.hoy{border-color:var(--accent)}
+.cal-cell.sel{background:var(--accent-soft)}
+.cal-cell .dots{display:flex;gap:2px;margin-top:2px}
+.cal-cell .dot{width:6px;height:6px;border-radius:50%}
+.dot.d-vencido,.dot.d-incumplido{background:var(--danger)}
+.dot.d-proximo,.dot.d-pendiente{background:var(--warn)}
+.dot.d-cumplido{background:var(--success)}
+
+.mini-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.mini-row:last-child{border-bottom:none}
+.mini-row .em{font-size:18px}
+.mini-row .tx{flex:1;min-width:0;font-size:13.5px}
+.mini-row .tx .t1{font-weight:600}
+.mini-row .tx .t2{color:var(--text-soft);font-size:12px}
+
+.userlist-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.userlist-row:last-child{border-bottom:none}
+.userlist-row .nombre{flex:1;font-weight:600}
+.cat-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.cat-row:last-child{border-bottom:none}
+.cat-row input[type=text]{flex:1}
+.cat-row .emoji-in{width:52px;flex:none;text-align:center}
+
+.mejora-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.mejora-row:last-child{border-bottom:none}
+.mejora-row .top{display:flex;align-items:center;gap:6px}
+.mejora-row input[type=text]{flex:1;border:none;background:transparent;padding:4px 0}
+.mejora-row .fecha{font-size:11px;color:var(--text-soft);margin-top:2px}
+
+.inline-add{display:flex;gap:6px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div id="setupScreen">
+  <div class="setup-card">
+    <h2>🤝 Acuerdos</h2>
+    <p class="hint">Pega la URL de tu Web App (Apps Script) para conectar la app a tus datos.</p>
+    <label for="setupGas">URL de la Web App (Apps Script)</label>
+    <input type="url" id="setupGas" placeholder="https://script.google.com/macros/s/…/exec">
+    <div class="setup-err" id="setupErr"></div>
+    <button class="btn block" style="margin-top:14px" onclick="finishSetup()">Conectar</button>
+  </div>
+</div>
+
+<div id="userScreen" class="hidden">
+  <div class="setup-card" id="userScreenInner"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">🤝 Acuerdos</div>
+    <button class="userbtn" onclick="switchTab('config')" id="userBtnHeader">👤</button>
+  </header>
+  <div id="connBanner">Sin conexión — viendo copia guardada. Los cambios se reintentarán solos.</div>
+
+  <main>
+    <div id="screen-inicio" class="screen active">
+      <h2>🏠 Inicio</h2>
+      <div id="inicioAlertas"></div>
+      <div class="card"><div class="body">
+        <h3>📊 Marcador por persona</h3>
+        <div id="inicioMarcador"></div>
+      </div></div>
+      <div class="card"><div class="body">
+        <h3>🕓 Recientes</h3>
+        <div id="inicioRecientes"></div>
+      </div></div>
+    </div>
+
+    <div id="screen-acuerdos" class="screen">
+      <h2>🤝 Acuerdos</h2>
+      <div class="searchbar"><input type="text" id="acBuscar" placeholder="Buscar acuerdo…" oninput="renderAcuerdos()"></div>
+      <div class="chips" id="acChipsEstado"></div>
+      <div class="chips" id="acChipsCategoria"></div>
+      <select id="acFiltroPersona" onchange="renderAcuerdos()"></select>
+      <div id="acLista" style="margin-top:12px"></div>
+      <button class="btn block" style="margin-top:14px" onclick="abrirEditorAcuerdo(null)">➕ Nuevo acuerdo</button>
+    </div>
+
+    <div id="screen-calendario" class="screen">
+      <h2>📅 Calendario</h2>
+      <div class="cal-header">
+        <button class="btn ghost small" onclick="cambiarMes(-1)">◀</button>
+        <div class="cal-titulo" id="calTitulo"></div>
+        <button class="btn ghost small" onclick="cambiarMes(1)">▶</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div id="calDiaSeleccionado" style="margin-top:14px"></div>
+      <h3 style="margin-top:20px">Próximos</h3>
+      <div id="calProximos"></div>
+    </div>
+
+    <div id="screen-config" class="screen">
+      <h2>⚙️ Configuración</h2>
+      <div class="card"><div class="body">
+        <h3>Usuario</h3>
+        <p class="hint">Sesión activa: <b id="cfgUsuarioActivo">—</b></p>
+        <button class="btn secondary" onclick="cambiarUsuario()">🔄 Cambiar de usuario</button>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Usuarios</h3>
+        <div id="cfgUsuariosLista"></div>
+        <button class="btn secondary" style="margin-top:8px" onclick="abrirNuevoUsuarioConfig()">➕ Agregar usuario</button>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Personas</h3>
+        <p class="hint">Con quién involucran los acuerdos — pareja, familia, amigos, trabajo…</p>
+        <div id="cfgPersonasLista"></div>
+        <button class="btn secondary" style="margin-top:8px" onclick="agregarPersonaConfig()">➕ Agregar persona</button>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Categorías</h3>
+        <div id="cfgCategoriasLista"></div>
+        <button class="btn secondary" style="margin-top:8px" onclick="agregarCategoria()">➕ Agregar categoría</button>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Mejoras</h3>
+        <p class="hint">Ideas, quejas, cosas que se te ocurran para la app.</p>
+        <div class="inline-add">
+          <input type="text" id="cfgMejoraTexto" placeholder="Escribe una idea…">
+          <button class="btn" style="flex:none" onclick="agregarMejora()">Agregar</button>
+        </div>
+        <div id="cfgMejorasLista" style="margin-top:10px"></div>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Papelera</h3>
+        <div id="cfgPapelera"></div>
+      </div></div>
+
+      <div class="card"><div class="body">
+        <h3>Datos y versión</h3>
+        <p class="hint">Versión: <b id="cfgVersion"></b>
+          <button class="btn ghost small" style="margin-left:8px" onclick="forceReloadApp()">🔄 Forzar actualización</button>
+        </p>
+        <p class="hint" id="cfgSheetLink"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn ghost" onclick="exportarRespaldo()">💾 Descargar respaldo</button>
+          <button class="btn ghost" onclick="cambiarUrlBackend()">🔗 Cambiar URL de la Web App</button>
+        </div>
+      </div></div>
+    </div>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="inicio" onclick="switchTab('inicio')"><span class="ic">🏠</span>Inicio</button>
+    <button data-tab="acuerdos" onclick="switchTab('acuerdos')"><span class="ic">🤝</span>Acuerdos</button>
+    <button data-tab="calendario" onclick="switchTab('calendario')"><span class="ic">📅</span>Calendario</button>
+    <button data-tab="config" onclick="switchTab('config')"><span class="ic">⚙️</span>Config</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//  Estado y configuración
+// ============================================================
+let GAS_URL = localStorage.getItem('acuerdos_gas_url') || '';
+let SHEET_URL = '';
+const BUILD_VERSION = 'Confianza';
+let DATA = { usuarios:[], personas:[], categorias:[], acuerdos:[], mejoras:[], config:[] };
+let usuarioActivo = null;
+
+let filtroEstado = 'todos';
+let filtroCategoria = 'todas';
+let calMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let calDiaSel = null;
+
+function esVerdadero(v){ return v===true || String(v).toLowerCase()==='true'; }
+function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2)); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window._toastT); window._toastT=setTimeout(()=>t.classList.remove('show'),2800); }
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function hoyLocalISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtFecha(iso){ if(!iso) return ''; const [y,m,d] = String(iso).slice(0,10).split('-'); return d && m && y ? d+'/'+m+'/'+y : iso; }
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DOW = ['L','M','X','J','V','S','D'];
+function diasEntre(iso){
+  if(!iso) return null;
+  const [y,m,d] = String(iso).slice(0,10).split('-').map(Number);
+  const objetivo = new Date(y, m-1, d);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((objetivo - hoy) / 86400000);
+}
+function fechaRelativa(iso){
+  const dd = diasEntre(iso);
+  if(dd===null) return '';
+  if(dd===0) return 'hoy';
+  if(dd===1) return 'mañana';
+  if(dd===-1) return 'ayer';
+  if(dd>1) return 'en '+dd+' días';
+  return 'hace '+Math.abs(dd)+' días';
+}
+
+// ============================================================
+//  Comunicación con el backend
+// ============================================================
+const ACCIONES_REINTENTABLES = new Set(['saveRow','marcarEstado']);
+const COLA_PENDIENTE_KEY = 'acuerdos_cola_pendiente';
+let reintentandoCola = false;
+function needsSetup(){ return !GAS_URL; }
+async function apiPost(action, params){
+  if(needsSetup()) return { ok:false, error:'sin vincular' };
+  const body = Object.assign({ action }, params||{});
+  try{
+    const f = new FormData(); f.append('payload', JSON.stringify(body));
+    const r = await fetch(GAS_URL, { method:'POST', body:f });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    setConnBanner(false);
+    return data;
+  }catch(e){
+    setConnBanner(true);
+    if(ACCIONES_REINTENTABLES.has(action) && !reintentandoCola) encolarReintento(action, params);
+    return { ok:false, error: e.message||'sin conexión' };
+  }
+}
+function encolarReintento(action, params){
+  let cola = [];
+  try{ cola = JSON.parse(localStorage.getItem(COLA_PENDIENTE_KEY))||[]; }catch(e){}
+  cola.push({ action, params });
+  try{ localStorage.setItem(COLA_PENDIENTE_KEY, JSON.stringify(cola)); }catch(e){}
+  showToast('Sin conexión — se guardará solo cuando vuelva el internet');
+}
+async function procesarColaPendiente(){
+  let cola = [];
+  try{ cola = JSON.parse(localStorage.getItem(COLA_PENDIENTE_KEY))||[]; }catch(e){}
+  if(!cola.length) return;
+  const restante = [];
+  let ok = 0;
+  reintentandoCola = true;
+  for(const item of cola){
+    const r = await apiPost(item.action, item.params);
+    if(r && r.ok) ok++; else restante.push(item);
+  }
+  reintentandoCola = false;
+  try{ localStorage.setItem(COLA_PENDIENTE_KEY, JSON.stringify(restante)); }catch(e){}
+  if(ok) showToast(`Se guardaron ${ok} cambio(s) pendiente(s)`);
+}
+function setConnBanner(show){ const el=document.getElementById('connBanner'); if(el) el.classList.toggle('show', show); }
+
+function finishSetup(){
+  const gasUrl = document.getElementById('setupGas').value.trim();
+  const err = document.getElementById('setupErr');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(gasUrl)){ err.textContent='La URL de la Web App debe terminar en /exec'; return; }
+  GAS_URL = gasUrl;
+  localStorage.setItem('acuerdos_gas_url', GAS_URL);
+  err.textContent = 'Conectando…';
+  apiPost('init', {}).then(r=>{
+    if(r && r.ok){ DATA = normalizeData(r.data); SHEET_URL = r.sheetUrl||''; localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA)); afterConnected(); }
+    else { err.textContent = 'No se pudo conectar: '+((r&&r.error)||'revisa el enlace'); }
+  });
+}
+function cambiarUrlBackend(){
+  confirmarEliminar('Vas a desconectar esta app de tu Google Sheet actual (tus datos no se borran, solo se deja de ver el enlace desde este dispositivo). ¿Continuar?', ()=>{
+    localStorage.removeItem('acuerdos_gas_url');
+    localStorage.removeItem('acuerdos_usuario_id');
+    location.reload();
+  });
+}
+function normalizeData(d){
+  return {
+    usuarios: d.usuarios||[], personas: d.personas||[], categorias: d.categorias||[],
+    acuerdos: d.acuerdos||[], mejoras: d.mejoras||[], config: d.config||[]
+  };
+}
+
+function afterConnected(){
+  document.getElementById('setupScreen').classList.add('hidden');
+  renderUserScreen();
+}
+
+function boot(){
+  const cached = localStorage.getItem('acuerdos_data_cache');
+  if(cached){ try{ DATA = normalizeData(JSON.parse(cached)); }catch(e){} }
+  if(needsSetup()){ return; }
+  document.getElementById('setupScreen').classList.add('hidden');
+  renderUserScreen();
+}
+async function refreshData(){
+  const r = await apiPost('getAll', {});
+  if(r && r.ok){
+    DATA = normalizeData(r.data);
+    if(r.sheetUrl) SHEET_URL = r.sheetUrl;
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderAllScreens();
+  }
+}
+function renderAllScreens(){
+  renderInicio(); renderAcuerdos(); renderCalendario(); renderConfig();
+}
+function switchTab(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  if(name==='inicio') renderInicio();
+  if(name==='acuerdos') renderAcuerdos();
+  if(name==='calendario') renderCalendario();
+  if(name==='config') renderConfig();
+}
+
+// ============================================================
+//  Modal genérico de confirmación / formulario
+// ============================================================
+function confirmarEliminar(mensaje, onConfirmar){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal confirm-modal">
+    <h3>¿Confirmar?</h3>
+    <p>${mensaje}</p>
+    <div class="actions">
+      <button class="btn ghost" id="cnCancel">Cancelar</button>
+      <button class="btn danger" id="cnOk">Confirmar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#cnCancel').onclick = ()=> overlay.remove();
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#cnOk').onclick = ()=>{ overlay.remove(); onConfirmar(); };
+}
+function abrirModal(html, opts){
+  opts = opts || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  overlay.addEventListener('click', e=>{
+    if(e.target!==overlay) return;
+    if(opts.confirmarCierre){ confirmarEliminar('Tienes cambios sin guardar — si sales se pierden. ¿Salir de todos modos?', ()=>overlay.remove()); }
+    else overlay.remove();
+  });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+function cerrarModales(){ document.querySelectorAll('.modal-overlay').forEach(o=>o.remove()); }
+
+async function forceReloadApp(){
+  try{
+    if('caches' in window){
+      const nombres = await caches.keys();
+      await Promise.all(nombres.map(n=>caches.delete(n)));
+    }
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  } catch(e){}
+  location.href = location.pathname + '?_r=' + Date.now();
+}
+
+// ============================================================
+//  Usuarios
+// ============================================================
+function usuariosActivos(){ return DATA.usuarios.filter(u=>!esVerdadero(u.Papelera)); }
+function renderUserScreen(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('userScreen').classList.remove('hidden');
+  const activos = usuariosActivos();
+  const guardadoId = localStorage.getItem('acuerdos_usuario_id');
+  const guardado = activos.find(u=>u.ID===guardadoId);
+  if(guardado){ activarUsuario(guardado); return; }
+
+  const inner = document.getElementById('userScreenInner');
+  if(!activos.length){
+    inner.innerHTML = `<h2>🤝 Acuerdos</h2>
+      <p class="hint">Es la primera vez que se abre esta app aquí — ¿cómo te llamas?</p>
+      <label>Tu nombre</label>
+      <input type="text" id="primerNombre" placeholder="ej: Temis">
+      <label>Contraseña (opcional)</label>
+      <input type="password" id="primerPass" placeholder="Déjalo vacío si no quieres">
+      <div class="setup-err" id="primerErr"></div>
+      <button class="btn block" style="margin-top:14px" onclick="crearPrimerUsuario()">Empezar</button>`;
+    return;
+  }
+  inner.innerHTML = `<h2>🤝 Acuerdos</h2>
+    <p class="hint">¿Quién eres?</p>
+    <div class="user-pick" id="userPickList"></div>
+    <button class="btn secondary block" style="margin-top:14px" onclick="mostrarFormNuevoUsuario()">➕ Nuevo usuario</button>`;
+  document.getElementById('userPickList').innerHTML = activos.map(u=>
+    `<button onclick="pedirActivarUsuario('${u.ID}')"><span>${escAttr(u.Nombre)}</span>${u.Password?'<span>🔒</span>':''}</button>`
+  ).join('');
+}
+async function crearPrimerUsuario(){
+  const nombre = document.getElementById('primerNombre').value.trim();
+  const err = document.getElementById('primerErr');
+  if(!nombre){ err.textContent = 'Escribe tu nombre'; return; }
+  const password = document.getElementById('primerPass').value;
+  const row = { ID: uid(), Nombre: nombre, Password: password||'', Papelera:false };
+  err.textContent = 'Creando…';
+  const r = await apiPost('saveRow', { table:'USUARIOS', row });
+  if(!r.ok){ err.textContent = 'No se pudo crear: '+(r.error||'sin conexión'); return; }
+  DATA.usuarios.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  activarUsuario(row);
+}
+function mostrarFormNuevoUsuario(){
+  const inner = document.getElementById('userScreenInner');
+  inner.innerHTML = `<h2>➕ Nuevo usuario</h2>
+    <label>Nombre</label>
+    <input type="text" id="nuevoNombre" placeholder="Nombre">
+    <label>Contraseña (opcional)</label>
+    <input type="password" id="nuevoPass" placeholder="Déjalo vacío si no quieres">
+    <div class="setup-err" id="nuevoErr"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn ghost" style="flex:1" onclick="renderUserScreen()">Cancelar</button>
+      <button class="btn" style="flex:1" onclick="crearNuevoUsuario()">Crear</button>
+    </div>`;
+}
+async function crearNuevoUsuario(){
+  const nombre = document.getElementById('nuevoNombre').value.trim();
+  const err = document.getElementById('nuevoErr');
+  if(!nombre){ err.textContent = 'Escribe un nombre'; return; }
+  const password = document.getElementById('nuevoPass').value;
+  const row = { ID: uid(), Nombre: nombre, Password: password||'', Papelera:false };
+  err.textContent = 'Creando…';
+  const r = await apiPost('saveRow', { table:'USUARIOS', row });
+  if(!r.ok){ err.textContent = 'No se pudo crear: '+(r.error||'sin conexión'); return; }
+  DATA.usuarios.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  activarUsuario(row);
+}
+function pedirActivarUsuario(id){
+  const u = DATA.usuarios.find(x=>x.ID===id);
+  if(!u) return;
+  if(!u.Password){ activarUsuario(u); return; }
+  const inner = document.getElementById('userScreenInner');
+  inner.innerHTML = `<h2>🔒 ${escAttr(u.Nombre)}</h2>
+    <label>Contraseña</label>
+    <input type="password" id="passIntento" placeholder="Contraseña">
+    <div class="setup-err" id="passErr"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn ghost" style="flex:1" onclick="renderUserScreen()">Cancelar</button>
+      <button class="btn" style="flex:1" onclick="intentarPassword('${id}')">Entrar</button>
+    </div>`;
+  document.getElementById('passIntento').focus();
+}
+function intentarPassword(id){
+  const u = DATA.usuarios.find(x=>x.ID===id);
+  const intento = document.getElementById('passIntento').value;
+  if(intento !== u.Password){ document.getElementById('passErr').textContent = 'Contraseña incorrecta'; return; }
+  activarUsuario(u);
+}
+function activarUsuario(u){
+  usuarioActivo = u;
+  localStorage.setItem('acuerdos_usuario_id', u.ID);
+  document.getElementById('userScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('userBtnHeader').textContent = '👤 '+u.Nombre;
+  renderAllScreens();
+  refreshData();
+  procesarColaPendiente();
+}
+function cambiarUsuario(){
+  localStorage.removeItem('acuerdos_usuario_id');
+  document.getElementById('app').classList.add('hidden');
+  renderUserScreen();
+}
+
+// ============================================================
+//  Personas y Categorías (catálogos)
+// ============================================================
+function personasActivas(){ return DATA.personas.filter(p=>!esVerdadero(p.Papelera)).sort((a,b)=>a.Nombre.localeCompare(b.Nombre,'es')); }
+function findPersona(id){ return DATA.personas.find(p=>p.ID===id); }
+function nombrePersona(id){ const p=findPersona(id); return p ? p.Nombre : (id ? '(persona eliminada)' : '—'); }
+function contarUsoPersona(id){ return acuerdosActivos().filter(a=>a.Quien===id||a.ConQuien===id).length; }
+
+function categoriasOrdenadas(){ return DATA.categorias.filter(c=>!esVerdadero(c.Papelera)).sort((a,b)=>(Number(a.Orden)||0)-(Number(b.Orden)||0)); }
+function findCategoria(id){ return DATA.categorias.find(c=>c.ID===id); }
+function nombreCategoria(id){ const c=findCategoria(id); return c ? c.Nombre : ''; }
+function emojiCategoria(id){ const c=findCategoria(id); return c ? (c.Emoji||'📌') : '📌'; }
+function contarUsoCategoria(id){ return acuerdosActivos().filter(a=>a.Categoria===id).length; }
+
+// ============================================================
+//  Acuerdos — helpers
+// ============================================================
+function acuerdosActivos(){ return DATA.acuerdos.filter(a=>!esVerdadero(a.Papelera)); }
+function esVencido(a){ return a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) < 0; }
+function esProximo(a){ return a.Estado==='pendiente' && a.FechaLimite && diasEntre(a.FechaLimite) >= 0 && diasEntre(a.FechaLimite) <= 7; }
+function urgenciaClase(a){
+  if(a.Estado==='cumplido') return 'cumplido';
+  if(a.Estado==='incumplido') return 'incumplido';
+  if(esVencido(a)) return 'vencido';
+  if(esProximo(a)) return 'proximo';
+  return 'pendiente';
+}
+function estadoLabel(a){
+  if(a.Estado==='cumplido') return { texto:'Cumplido', clase:'cumplido' };
+  if(a.Estado==='incumplido') return { texto:'Incumplido', clase:'incumplido' };
+  if(esVencido(a)) return { texto:'Vencido', clase:'vencido' };
+  return { texto:'Pendiente', clase:'pendiente' };
+}
+function ordenarAcuerdos(lista){
+  const pendientes = lista.filter(a=>a.Estado==='pendiente').sort((a,b)=>(a.FechaLimite||'9999').localeCompare(b.FechaLimite||'9999'));
+  const resueltos = lista.filter(a=>a.Estado!=='pendiente').sort((a,b)=>(b.FechaCumplimiento||b.FechaLimite||'').localeCompare(a.FechaCumplimiento||a.FechaLimite||''));
+  return pendientes.concat(resueltos);
+}
+const RECURRENCIA_LABEL = { semanal:'Cada semana', mensual:'Cada mes', anual:'Cada año' };
+
+function acCardHtml(a){
+  const u = urgenciaClase(a);
+  const est = estadoLabel(a);
+  const fechaClase = (u==='vencido') ? 'u-vencido' : (u==='proximo' ? 'u-proximo' : '');
+  const conQuien = a.ConQuien ? (' → '+escAttr(nombrePersona(a.ConQuien))) : '';
+  return `<div class="ac-card u-${u}" onclick="abrirDetalleAcuerdo('${a.ID}')">
+    <div class="cat-em">${emojiCategoria(a.Categoria)}</div>
+    <div class="info">
+      <div class="titulo">${escAttr(a.Titulo)}</div>
+      <div class="personas">${escAttr(nombrePersona(a.Quien))}${conQuien}</div>
+      <div class="meta">
+        <span class="fecha ${fechaClase}">📅 ${fmtFecha(a.FechaLimite)} · ${fechaRelativa(a.FechaLimite)}</span>
+        <span class="badge ${est.clase}">${est.texto}</span>
+        ${a.Recurrencia ? '<span class="hint">🔁 '+RECURRENCIA_LABEL[a.Recurrencia]+'</span>' : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+//  Inicio
+// ============================================================
+function renderInicio(){
+  const activos = acuerdosActivos();
+  const vencidos = activos.filter(esVencido);
+  const proximos = activos.filter(esProximo);
+  const alertas = document.getElementById('inicioAlertas');
+  let html = '';
+  if(vencidos.length) html += `<div class="alerta danger" onclick="irAFiltro('vencido')">🔴 ${vencidos.length} acuerdo${vencidos.length>1?'s':''} vencido${vencidos.length>1?'s':''} sin cumplir</div>`;
+  if(proximos.length) html += `<div class="alerta warn" onclick="irAFiltro('proximo')">🟡 ${proximos.length} por vencer en los próximos 7 días</div>`;
+  if(!vencidos.length && !proximos.length) html = `<div class="alerta ok">🟢 Todo al día — no hay acuerdos vencidos ni por vencer.</div>`;
+  alertas.innerHTML = html;
+
+  const marcador = calcularMarcador();
+  const contM = document.getElementById('inicioMarcador');
+  contM.innerHTML = marcador.length ? marcador.map(m=>`
+    <div class="persona-card">
+      <div style="flex:1">
+        <div class="nombre">${escAttr(m.nombre)}</div>
+        <div class="barra"><div class="barra-fill" style="width:${m.pct}%"></div></div>
+        <div class="sub">${m.cumplidos} cumplido${m.cumplidos!==1?'s':''} · ${m.incumplidos} incumplido${m.incumplidos!==1?'s':''}</div>
+      </div>
+      <div class="pct">${m.pct}%</div>
+    </div>`).join('') : '<p class="hint">Todavía no hay acuerdos resueltos para armar el marcador.</p>';
+
+  const recientes = activos.slice().sort((a,b)=>(b.FechaAlta||'').localeCompare(a.FechaAlta||'')).slice(0,5);
+  const contR = document.getElementById('inicioRecientes');
+  contR.innerHTML = recientes.length ? recientes.map(a=>`
+    <div class="mini-row" onclick="abrirDetalleAcuerdo('${a.ID}')">
+      <span class="em">${emojiCategoria(a.Categoria)}</span>
+      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersona(a.Quien))} · ${fmtFecha(a.FechaLimite)}</div></div>
+      <span class="badge ${estadoLabel(a).clase}">${estadoLabel(a).texto}</span>
+    </div>`).join('') : '<p class="hint">Todavía no has agregado ningún acuerdo.</p>';
+}
+function calcularMarcador(){
+  const stats = {};
+  acuerdosActivos().forEach(a=>{
+    if(a.Estado==='cumplido' || a.Estado==='incumplido'){
+      const id = a.Quien; if(!id) return;
+      if(!stats[id]) stats[id] = { cumplidos:0, incumplidos:0 };
+      stats[id][a.Estado==='cumplido'?'cumplidos':'incumplidos']++;
+    }
+  });
+  return Object.keys(stats).map(id=>{
+    const s = stats[id]; const total = s.cumplidos+s.incumplidos;
+    return { id, nombre: nombrePersona(id), cumplidos:s.cumplidos, incumplidos:s.incumplidos, total, pct: total ? Math.round(s.cumplidos/total*100) : 0 };
+  }).sort((a,b)=>b.total-a.total);
+}
+function irAFiltro(estado){
+  filtroEstado = estado; filtroCategoria = 'todas';
+  switchTab('acuerdos');
+}
+
+// ============================================================
+//  Pantalla Acuerdos (lista + filtros)
+// ============================================================
+const CHIPS_ESTADO = [
+  { v:'todos', label:'Todos' }, { v:'pendiente', label:'Pendientes' },
+  { v:'vencido', label:'Vencidos' }, { v:'proximo', label:'Por vencer' },
+  { v:'cumplido', label:'Cumplidos' }, { v:'incumplido', label:'Incumplidos' }
+];
+function pasaFiltroEstado(a){
+  if(filtroEstado==='todos') return true;
+  if(filtroEstado==='pendiente') return a.Estado==='pendiente';
+  if(filtroEstado==='vencido') return esVencido(a);
+  if(filtroEstado==='proximo') return esProximo(a);
+  if(filtroEstado==='cumplido') return a.Estado==='cumplido';
+  if(filtroEstado==='incumplido') return a.Estado==='incumplido';
+  return true;
+}
+function renderAcuerdos(){
+  document.getElementById('acChipsEstado').innerHTML = CHIPS_ESTADO.map(c=>
+    `<button class="chip ${filtroEstado===c.v?'active':''}" onclick="filtroEstado='${c.v}';renderAcuerdos()">${c.label}</button>`).join('');
+  const cats = categoriasOrdenadas();
+  document.getElementById('acChipsCategoria').innerHTML = `<button class="chip ${filtroCategoria==='todas'?'active':''}" onclick="filtroCategoria='todas';renderAcuerdos()">Todas</button>` +
+    cats.map(c=>`<button class="chip ${filtroCategoria===c.ID?'active':''}" onclick="filtroCategoria='${c.ID}';renderAcuerdos()">${c.Emoji} ${escAttr(c.Nombre)}</button>`).join('');
+
+  const selPersona = document.getElementById('acFiltroPersona');
+  const valPrevio = selPersona.value || 'todas';
+  const todasPersonas = DATA.personas.slice().sort((a,b)=>a.Nombre.localeCompare(b.Nombre,'es'));
+  selPersona.innerHTML = `<option value="todas">Todas las personas</option>` +
+    todasPersonas.map(p=>`<option value="${p.ID}">${escAttr(p.Nombre)}${esVerdadero(p.Papelera)?' (archivada)':''}</option>`).join('');
+  selPersona.value = valPrevio;
+
+  const buscar = (document.getElementById('acBuscar').value||'').toLowerCase().trim();
+  let lista = acuerdosActivos().filter(pasaFiltroEstado);
+  if(filtroCategoria!=='todas') lista = lista.filter(a=>a.Categoria===filtroCategoria);
+  if(selPersona.value!=='todas') lista = lista.filter(a=>a.Quien===selPersona.value || a.ConQuien===selPersona.value);
+  if(buscar) lista = lista.filter(a=>(a.Titulo||'').toLowerCase().includes(buscar) || (a.Detalles||'').toLowerCase().includes(buscar));
+
+  lista = ordenarAcuerdos(lista);
+  const cont = document.getElementById('acLista');
+  cont.innerHTML = lista.length ? lista.map(acCardHtml).join('') : '<p class="hint">No hay acuerdos con este filtro.</p>';
+}
+
+// ============================================================
+//  Editor de acuerdo (crear / editar)
+// ============================================================
+function poblarSelectPersonas(selectEl, selectedId){
+  const activas = personasActivas();
+  const extra = selectedId && !activas.find(p=>p.ID===selectedId) ? [findPersona(selectedId)].filter(Boolean) : [];
+  const todas = activas.concat(extra);
+  selectEl.innerHTML = `<option value="">— Elegir —</option>` + todas.map(p=>`<option value="${p.ID}">${escAttr(p.Nombre)}</option>`).join('');
+  selectEl.value = selectedId || '';
+}
+function abrirEditorAcuerdo(id, fechaSugerida){
+  const a = id ? DATA.acuerdos.find(x=>x.ID===id) : null;
+  const cats = categoriasOrdenadas();
+  const html = `
+    <h3>${a?'✏️ Editar acuerdo':'➕ Nuevo acuerdo'}</h3>
+    <div class="field"><label>Título</label><input type="text" id="edTitulo" value="${a?escAttr(a.Titulo):''}" placeholder="ej: Sacar la basura los martes"></div>
+    <div class="field"><label>Categoría</label>
+      <select id="edCategoria"><option value="">— Sin categoría —</option>${cats.map(c=>`<option value="${c.ID}" ${a&&a.Categoria===c.ID?'selected':''}>${c.Emoji} ${escAttr(c.Nombre)}</option>`).join('')}</select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quién se compromete</label>
+        <select id="edQuien"></select>
+        <button type="button" class="btn ghost small" style="margin-top:6px" onclick="mostrarAgregarPersonaInline('edQuien')">➕ Nueva persona</button>
+        <div id="edQuienInline"></div>
+      </div>
+      <div class="field">
+        <label>Con quién (opcional)</label>
+        <select id="edConQuien"></select>
+        <button type="button" class="btn ghost small" style="margin-top:6px" onclick="mostrarAgregarPersonaInline('edConQuien')">➕ Nueva persona</button>
+        <div id="edConQuienInline"></div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Fecha límite</label><input type="date" id="edFecha" value="${a?a.FechaLimite:(fechaSugerida||'')}"></div>
+      <div class="field"><label>Recurrencia</label>
+        <select id="edRecurrencia">
+          <option value="">Ninguna</option>
+          <option value="semanal" ${a&&a.Recurrencia==='semanal'?'selected':''}>Cada semana</option>
+          <option value="mensual" ${a&&a.Recurrencia==='mensual'?'selected':''}>Cada mes</option>
+          <option value="anual" ${a&&a.Recurrencia==='anual'?'selected':''}>Cada año</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Detalles (opcional)</label><textarea id="edDetalles" rows="3" placeholder="Notas, contexto…">${a?escAttr(a.Detalles):''}</textarea></div>
+    <div class="setup-err" id="edErr"></div>
+    <div class="actions">
+      <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn" onclick="guardarAcuerdo(${a?`'${a.ID}'`:'null'})">💾 Guardar</button>
+    </div>`;
+  const overlay = abrirModal(html, {confirmarCierre:true});
+  poblarSelectPersonas(overlay.querySelector('#edQuien'), a?a.Quien:null);
+  poblarSelectPersonas(overlay.querySelector('#edConQuien'), a?a.ConQuien:null);
+  if(a) overlay.querySelector('#edRecurrencia').value = a.Recurrencia||'';
+}
+function mostrarAgregarPersonaInline(selectId){
+  const cont = document.getElementById(selectId+'Inline');
+  cont.innerHTML = `<div class="inline-add">
+    <input type="text" id="${selectId}NuevoNombre" placeholder="Nombre de la persona">
+    <button type="button" class="btn small" style="flex:none" onclick="confirmarPersonaInline('${selectId}')">✓</button>
+  </div>`;
+  document.getElementById(selectId+'NuevoNombre').focus();
+}
+async function confirmarPersonaInline(selectId){
+  const input = document.getElementById(selectId+'NuevoNombre');
+  const nombre = input.value.trim();
+  if(!nombre){ showToast('Escribe un nombre'); return; }
+  const row = { ID: uid(), Nombre: nombre, Papelera:false, FechaPapelera:'' };
+  DATA.personas.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  document.getElementById(selectId+'Inline').innerHTML = '';
+  ['edQuien','edConQuien'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ const actual = el.value; poblarSelectPersonas(el, id===selectId ? row.ID : (actual||null)); }
+  });
+  await apiPost('saveRow', { table:'PERSONAS', row });
+}
+async function guardarAcuerdo(id){
+  const titulo = document.getElementById('edTitulo').value.trim();
+  const quien = document.getElementById('edQuien').value;
+  const fecha = document.getElementById('edFecha').value;
+  const err = document.getElementById('edErr');
+  if(!titulo){ err.textContent = 'Escribe un título'; return; }
+  if(!quien){ err.textContent = 'Elige quién se compromete'; return; }
+  if(!fecha){ err.textContent = 'Elige una fecha límite'; return; }
+
+  const existente = id ? DATA.acuerdos.find(x=>x.ID===id) : null;
+  const row = {
+    ID: id || uid(),
+    Titulo: titulo,
+    Detalles: document.getElementById('edDetalles').value.trim(),
+    Quien: quien,
+    ConQuien: document.getElementById('edConQuien').value,
+    Categoria: document.getElementById('edCategoria').value,
+    FechaLimite: fecha,
+    Recurrencia: document.getElementById('edRecurrencia').value,
+    Estado: existente ? existente.Estado : 'pendiente',
+    FechaCumplimiento: existente ? existente.FechaCumplimiento : '',
+    Usuario: existente ? existente.Usuario : (usuarioActivo?usuarioActivo.ID:''),
+    FechaAlta: existente ? existente.FechaAlta : hoyLocalISO(),
+    Papelera: false, FechaPapelera: ''
+  };
+  err.textContent = 'Guardando…';
+  const idx = DATA.acuerdos.findIndex(x=>x.ID===row.ID);
+  if(idx>=0) DATA.acuerdos[idx] = row; else DATA.acuerdos.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  cerrarModales();
+  renderAllScreens();
+  const r = await apiPost('saveRow', { table:'ACUERDOS', row });
+  if(!r.ok) showToast('No se pudo guardar en el servidor: '+(r.error||'sin conexión'));
+  else showToast('Guardado');
+}
+
+// ============================================================
+//  Detalle de acuerdo (ver / marcar estado / eliminar)
+// ============================================================
+function abrirDetalleAcuerdo(id){
+  const a = DATA.acuerdos.find(x=>x.ID===id); if(!a) return;
+  const est = estadoLabel(a);
+  const conQuien = a.ConQuien ? `<p><b>Con quién:</b> ${escAttr(nombrePersona(a.ConQuien))}</p>` : '';
+  const detalles = a.Detalles ? `<p><b>Detalles:</b> ${escAttr(a.Detalles)}</p>` : '';
+  const resuelto = a.Estado!=='pendiente' ? `<p><b>Resuelto:</b> ${fmtFecha(a.FechaCumplimiento)}</p>` : '';
+  const recurrente = a.Recurrencia ? `<p><b>Recurrencia:</b> 🔁 ${RECURRENCIA_LABEL[a.Recurrencia]}</p>` : '';
+  const botonesEstado = a.Estado==='pendiente'
+    ? `<button class="btn success" onclick="marcarEstadoAcuerdo('${a.ID}','cumplido')">✅ Marcar cumplido</button>
+       <button class="btn danger" onclick="marcarEstadoAcuerdo('${a.ID}','incumplido')">❌ Marcar incumplido</button>`
+    : `<button class="btn ghost" onclick="marcarEstadoAcuerdo('${a.ID}','pendiente')">↩️ Volver a pendiente</button>`;
+  const html = `
+    <h3>${escAttr(a.Titulo)} <span class="badge ${est.clase}">${est.texto}</span></h3>
+    <p>${emojiCategoria(a.Categoria)} ${escAttr(nombreCategoria(a.Categoria)||'Sin categoría')}</p>
+    <p><b>Quién:</b> ${escAttr(nombrePersona(a.Quien))}</p>
+    ${conQuien}
+    <p><b>Fecha límite:</b> ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</p>
+    ${resuelto}
+    ${recurrente}
+    ${detalles}
+    <div class="actions" style="justify-content:flex-start">${botonesEstado}</div>
+    <div class="actions">
+      <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cerrar</button>
+      <button class="btn plum" onclick="cerrarModales();abrirEditorAcuerdo('${a.ID}')">✏️ Editar</button>
+      <button class="btn danger" onclick="eliminarAcuerdo('${a.ID}')">🗑 Eliminar</button>
+    </div>`;
+  abrirModal(html);
+}
+async function marcarEstadoAcuerdo(id, estado){
+  const a = DATA.acuerdos.find(x=>x.ID===id); if(!a) return;
+  const fecha = hoyLocalISO();
+  a.Estado = estado;
+  a.FechaCumplimiento = estado==='pendiente' ? '' : fecha;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  cerrarModales();
+  renderAllScreens();
+  const r = await apiPost('marcarEstado', { id, estado, fecha });
+  if(r && r.ok && r.siguiente){
+    DATA.acuerdos.push(r.siguiente);
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderAllScreens();
+    showToast('Cumplido — se creó el siguiente acuerdo recurrente');
+  } else if(!r || !r.ok){
+    showToast('No se pudo guardar en el servidor: '+((r&&r.error)||'sin conexión'));
+  } else {
+    showToast('Actualizado');
+  }
+}
+function eliminarAcuerdo(id){
+  confirmarEliminar('Este acuerdo se moverá a la papelera (se puede recuperar).', async ()=>{
+    const a = DATA.acuerdos.find(x=>x.ID===id); if(!a) return;
+    a.Papelera = true; a.FechaPapelera = hoyLocalISO();
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    cerrarModales();
+    renderAllScreens();
+    await apiPost('saveRow', { table:'ACUERDOS', row:a });
+  });
+}
+
+// ============================================================
+//  Calendario
+// ============================================================
+function cambiarMes(delta){
+  calMes = new Date(calMes.getFullYear(), calMes.getMonth()+delta, 1);
+  calDiaSel = null;
+  renderCalendario();
+}
+function acuerdosDelDia(iso){
+  return acuerdosActivos().filter(a=>a.FechaLimite===iso);
+}
+function renderCalendario(){
+  document.getElementById('calTitulo').textContent = MESES[calMes.getMonth()]+' '+calMes.getFullYear();
+  const primerDia = new Date(calMes.getFullYear(), calMes.getMonth(), 1);
+  const diasEnMes = new Date(calMes.getFullYear(), calMes.getMonth()+1, 0).getDate();
+  const offset = (primerDia.getDay()+6)%7; // lunes=0
+  const hoy = hoyLocalISO();
+
+  let html = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<offset;i++) html += `<div class="cal-cell vacio"></div>`;
+  for(let dia=1; dia<=diasEnMes; dia++){
+    const iso = calMes.getFullYear()+'-'+String(calMes.getMonth()+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+    const delDia = acuerdosDelDia(iso);
+    const dotsSet = new Set(delDia.map(a=>{
+      if(a.Estado==='cumplido') return 'cumplido';
+      if(a.Estado==='incumplido') return 'incumplido';
+      return esVencido(a) ? 'vencido' : (esProximo(a) ? 'proximo' : 'pendiente');
+    }));
+    const dots = Array.from(dotsSet).slice(0,3).map(c=>`<span class="dot d-${c}"></span>`).join('');
+    const clases = ['cal-cell'];
+    if(iso===hoy) clases.push('hoy');
+    if(iso===calDiaSel) clases.push('sel');
+    html += `<div class="${clases.join(' ')}" onclick="seleccionarDia('${iso}')">${dia}<div class="dots">${dots}</div></div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  if(calDiaSel){
+    const delDia = acuerdosDelDia(calDiaSel);
+    document.getElementById('calDiaSeleccionado').innerHTML = `
+      <h3>${fmtFecha(calDiaSel)}</h3>
+      ${delDia.length ? delDia.map(acCardHtml).join('') : '<p class="hint">Nada agendado este día.</p>'}
+      <button class="btn secondary block" style="margin-top:8px" onclick="abrirEditorAcuerdo(null,'${calDiaSel}')">➕ Agregar acuerdo este día</button>`;
+  } else {
+    document.getElementById('calDiaSeleccionado').innerHTML = '';
+  }
+
+  const proximos = acuerdosActivos().filter(a=>a.Estado==='pendiente' && a.FechaLimite && a.FechaLimite>=hoy)
+    .sort((a,b)=>a.FechaLimite.localeCompare(b.FechaLimite)).slice(0,6);
+  document.getElementById('calProximos').innerHTML = proximos.length ? proximos.map(a=>`
+    <div class="mini-row" onclick="abrirDetalleAcuerdo('${a.ID}')">
+      <span class="em">${emojiCategoria(a.Categoria)}</span>
+      <div class="tx"><div class="t1">${escAttr(a.Titulo)}</div><div class="t2">${escAttr(nombrePersona(a.Quien))} · ${fmtFecha(a.FechaLimite)} (${fechaRelativa(a.FechaLimite)})</div></div>
+    </div>`).join('') : '<p class="hint">No hay nada próximo agendado.</p>';
+}
+function seleccionarDia(iso){ calDiaSel = (calDiaSel===iso) ? null : iso; renderCalendario(); }
+
+// ============================================================
+//  Configuración
+// ============================================================
+function renderConfig(){
+  if(!usuarioActivo) return;
+  document.getElementById('cfgUsuarioActivo').textContent = usuarioActivo.Nombre;
+  document.getElementById('cfgVersion').textContent = BUILD_VERSION;
+  document.getElementById('cfgSheetLink').innerHTML = SHEET_URL ? `<a href="${SHEET_URL}" target="_blank" rel="noopener">📄 Ver mis datos (Google Sheet)</a>` : '';
+
+  document.getElementById('cfgUsuariosLista').innerHTML = usuariosActivos().map(u=>`
+    <div class="userlist-row">
+      <span class="nombre">${escAttr(u.Nombre)}${u.ID===usuarioActivo.ID?' (tú)':''} ${u.Password?'🔒':''}</span>
+      <button class="btn ghost small" onclick="editarUsuarioConfig('${u.ID}')">✏️</button>
+      <button class="btn ghost small" onclick="eliminarUsuarioConfig('${u.ID}')">🗑</button>
+    </div>`).join('');
+
+  document.getElementById('cfgPersonasLista').innerHTML = personasActivas().map(p=>`
+    <div class="cat-row">
+      <input type="text" value="${escAttr(p.Nombre)}" onchange="editarPersonaCampo('${p.ID}',this.value)">
+      <button class="btn ghost small" onclick="eliminarPersonaConfig('${p.ID}')">🗑</button>
+    </div>`).join('') || '<p class="hint">Todavía no hay personas agregadas.</p>';
+
+  document.getElementById('cfgCategoriasLista').innerHTML = categoriasOrdenadas().map((c,i,arr)=>`
+    <div class="cat-row">
+      <input type="text" class="emoji-in" value="${escAttr(c.Emoji)}" onchange="editarCategoriaCampo('${c.ID}','Emoji',this.value)">
+      <input type="text" value="${escAttr(c.Nombre)}" onchange="editarCategoriaCampo('${c.ID}','Nombre',this.value)">
+      <button class="btn ghost small" ${i===0?'disabled':''} onclick="moverCategoria('${c.ID}',-1)">↑</button>
+      <button class="btn ghost small" ${i===arr.length-1?'disabled':''} onclick="moverCategoria('${c.ID}',1)">↓</button>
+      <button class="btn ghost small" onclick="eliminarCategoria('${c.ID}')">🗑</button>
+    </div>`).join('');
+
+  const mejoras = DATA.mejoras.slice().sort((a,b)=>(b.Fecha||'').localeCompare(a.Fecha||''));
+  document.getElementById('cfgMejorasLista').innerHTML = mejoras.length ? mejoras.map(m=>`
+    <div class="mejora-row">
+      <div class="top">
+        <input type="text" value="${escAttr(m.Texto)}" onchange="editarMejoraTexto('${m.ID}',this.value)">
+        <button class="btn ghost small" onclick="copiarMejora('${m.ID}')">📋</button>
+        <button class="btn ghost small" onclick="eliminarMejora('${m.ID}')">🗑</button>
+      </div>
+      <div class="fecha">${fmtFecha(m.Fecha)}</div>
+    </div>`).join('') : '<p class="hint">Sin ideas guardadas todavía.</p>';
+
+  renderPapeleraConfig();
+}
+
+// -- Usuarios --
+function abrirNuevoUsuarioConfig(){
+  const html = `
+    <h3>➕ Nuevo usuario</h3>
+    <div class="field"><label>Nombre</label><input type="text" id="cfgNuevoNombre"></div>
+    <div class="field"><label>Contraseña (opcional)</label><input type="password" id="cfgNuevoPass"></div>
+    <div class="actions">
+      <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn" onclick="guardarNuevoUsuarioConfig()">💾 Crear</button>
+    </div>`;
+  abrirModal(html, {confirmarCierre:true});
+}
+async function guardarNuevoUsuarioConfig(){
+  const nombre = document.getElementById('cfgNuevoNombre').value.trim();
+  if(!nombre){ showToast('Escribe un nombre'); return; }
+  const row = { ID: uid(), Nombre: nombre, Password: document.getElementById('cfgNuevoPass').value||'', Papelera:false };
+  const r = await apiPost('saveRow', { table:'USUARIOS', row });
+  if(!r.ok){ showToast('No se pudo crear: '+(r.error||'sin conexión')); return; }
+  DATA.usuarios.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  cerrarModales();
+  renderConfig();
+  showToast('Usuario creado');
+}
+function editarUsuarioConfig(id){
+  const u = DATA.usuarios.find(x=>x.ID===id); if(!u) return;
+  const html = `
+    <h3>✏️ ${escAttr(u.Nombre)}</h3>
+    <div class="field"><label>Nombre</label><input type="text" id="cfgEdNombre" value="${escAttr(u.Nombre)}"></div>
+    <div class="field"><label>Contraseña (vacío = sin contraseña)</label><input type="password" id="cfgEdPass" value="${escAttr(u.Password)}"></div>
+    <div class="actions">
+      <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn" onclick="guardarUsuarioConfig('${id}')">💾 Guardar</button>
+    </div>`;
+  abrirModal(html, {confirmarCierre:true});
+}
+async function guardarUsuarioConfig(id){
+  const u = DATA.usuarios.find(x=>x.ID===id); if(!u) return;
+  u.Nombre = document.getElementById('cfgEdNombre').value.trim() || u.Nombre;
+  u.Password = document.getElementById('cfgEdPass').value;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  cerrarModales();
+  if(usuarioActivo.ID===id){ usuarioActivo = u; document.getElementById('userBtnHeader').textContent = '👤 '+u.Nombre; }
+  renderConfig();
+  await apiPost('saveRow', { table:'USUARIOS', row:u });
+  showToast('Guardado');
+}
+function eliminarUsuarioConfig(id){
+  if(id===usuarioActivo.ID){ showToast('No puedes eliminar tu propio usuario activo'); return; }
+  confirmarEliminar('Este usuario se moverá a la papelera (sus datos no se borran).', async ()=>{
+    const u = DATA.usuarios.find(x=>x.ID===id); if(!u) return;
+    u.Papelera = true;
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderConfig();
+    await apiPost('saveRow', { table:'USUARIOS', row:u });
+  });
+}
+
+// -- Personas --
+async function agregarPersonaConfig(){
+  const row = { ID: uid(), Nombre:'Nueva persona', Papelera:false, FechaPapelera:'' };
+  DATA.personas.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  renderConfig();
+  await apiPost('saveRow', { table:'PERSONAS', row });
+}
+async function editarPersonaCampo(id, nombre){
+  const p = DATA.personas.find(x=>x.ID===id); if(!p) return;
+  p.Nombre = nombre.trim() || p.Nombre;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  await apiPost('saveRow', { table:'PERSONAS', row:p });
+  renderAllScreens();
+}
+function eliminarPersonaConfig(id){
+  const usos = contarUsoPersona(id);
+  const msg = usos>0
+    ? `Esta persona aparece en ${usos} acuerdo${usos>1?'s':''}. No se borra su historial: se archiva, deja de aparecer al crear acuerdos nuevos.`
+    : 'Esta persona se moverá a la papelera (se puede recuperar).';
+  confirmarEliminar(msg, async ()=>{
+    const p = DATA.personas.find(x=>x.ID===id); if(!p) return;
+    p.Papelera = true; p.FechaPapelera = hoyLocalISO();
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderConfig();
+    await apiPost('saveRow', { table:'PERSONAS', row:p });
+  });
+}
+
+// -- Categorías --
+async function agregarCategoria(){
+  const row = { ID: uid(), Nombre:'Nueva categoría', Emoji:'📌', Orden: categoriasOrdenadas().length, Papelera:false, FechaPapelera:'' };
+  DATA.categorias.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  renderConfig();
+  await apiPost('saveRow', { table:'CATEGORIAS', row });
+}
+async function editarCategoriaCampo(id, campo, valor){
+  const c = DATA.categorias.find(x=>x.ID===id); if(!c) return;
+  c[campo] = valor;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  await apiPost('saveRow', { table:'CATEGORIAS', row:c });
+  renderAllScreens();
+}
+async function moverCategoria(id, delta){
+  const ordenadas = categoriasOrdenadas();
+  const i = ordenadas.findIndex(c=>c.ID===id);
+  const j = i+delta;
+  if(j<0 || j>=ordenadas.length) return;
+  const a = ordenadas[i], b = ordenadas[j];
+  const tmp = a.Orden; a.Orden = b.Orden; b.Orden = tmp;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  renderConfig();
+  await apiPost('saveRow', { table:'CATEGORIAS', row:a });
+  await apiPost('saveRow', { table:'CATEGORIAS', row:b });
+}
+function eliminarCategoria(id){
+  const usos = contarUsoCategoria(id);
+  const msg = usos>0
+    ? `Esta categoría se usa en ${usos} acuerdo${usos>1?'s':''}. No se borra su historial: se archiva, deja de aparecer al crear acuerdos nuevos.`
+    : 'Esta categoría se moverá a la papelera (se puede recuperar).';
+  confirmarEliminar(msg, async ()=>{
+    const c = DATA.categorias.find(x=>x.ID===id); if(!c) return;
+    c.Papelera = true; c.FechaPapelera = hoyLocalISO();
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderConfig();
+    await apiPost('saveRow', { table:'CATEGORIAS', row:c });
+  });
+}
+
+// -- Mejoras --
+async function agregarMejora(){
+  const input = document.getElementById('cfgMejoraTexto');
+  const texto = input.value.trim();
+  if(!texto){ showToast('Escribe una idea primero'); return; }
+  const row = { ID: uid(), Texto: texto, Fecha: hoyLocalISO() };
+  DATA.mejoras.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  input.value = '';
+  renderConfig();
+  await apiPost('saveRow', { table:'MEJORAS', row });
+}
+async function editarMejoraTexto(id, valor){
+  const m = DATA.mejoras.find(x=>x.ID===id); if(!m) return;
+  m.Texto = valor.trim() || m.Texto;
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  await apiPost('saveRow', { table:'MEJORAS', row:m });
+}
+function copiarMejora(id){
+  const m = DATA.mejoras.find(x=>x.ID===id); if(!m) return;
+  navigator.clipboard.writeText(m.Texto).then(()=>showToast('Copiado')).catch(()=>showToast('No se pudo copiar'));
+}
+function eliminarMejora(id){
+  confirmarEliminar('Se borra para siempre esta idea.', async ()=>{
+    const idx = DATA.mejoras.findIndex(x=>x.ID===id);
+    if(idx>=0) DATA.mejoras.splice(idx,1);
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderConfig();
+    await apiPost('deleteRow', { table:'MEJORAS', id });
+  });
+}
+
+// -- Papelera --
+function renderPapeleraConfig(){
+  const items = [];
+  DATA.acuerdos.filter(r=>esVerdadero(r.Papelera)).forEach(r=>items.push({tabla:'ACUERDOS', nombre:r.Titulo, row:r}));
+  DATA.personas.filter(r=>esVerdadero(r.Papelera)).forEach(r=>items.push({tabla:'PERSONAS', nombre:r.Nombre, row:r}));
+  DATA.categorias.filter(r=>esVerdadero(r.Papelera)).forEach(r=>items.push({tabla:'CATEGORIAS', nombre:r.Nombre, row:r}));
+  DATA.usuarios.filter(r=>esVerdadero(r.Papelera)).forEach(r=>items.push({tabla:'USUARIOS', nombre:r.Nombre, row:r}));
+  const cont = document.getElementById('cfgPapelera');
+  if(!items.length){ cont.innerHTML = '<p class="hint">La papelera está vacía.</p>'; return; }
+  cont.innerHTML = `<p class="hint">Se vacía sola después de 30 días.</p>` + items.map(it=>`<div class="userlist-row">
+    <span class="nombre">${escAttr(it.nombre)} <span class="hint">(${it.tabla.toLowerCase()})</span></span>
+    <button class="btn ghost small" onclick="restaurarPapelera('${it.tabla}','${it.row.ID}')">♻️</button>
+    <button class="btn ghost small" onclick="borrarParaSiempre('${it.tabla}','${it.row.ID}')">🗑</button>
+  </div>`).join('');
+}
+async function restaurarPapelera(tabla, id){
+  const arr = DATA[tabla.toLowerCase()];
+  const row = arr.find(x=>x.ID===id); if(!row) return;
+  row.Papelera = false; row.FechaPapelera = '';
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  renderConfig(); renderAllScreens();
+  await apiPost('saveRow', { table: tabla, row });
+  showToast('Restaurado');
+}
+function borrarParaSiempre(tabla, id){
+  confirmarEliminar('Esto se borra para siempre y no se puede deshacer.', async ()=>{
+    const arr = DATA[tabla.toLowerCase()];
+    const idx = arr.findIndex(x=>x.ID===id);
+    if(idx>=0) arr.splice(idx,1);
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderConfig();
+    await apiPost('deleteRow', { table: tabla, id });
+    showToast('Borrado para siempre');
+  });
+}
+
+// -- Respaldo --
+function exportarRespaldo(){
+  const payload = JSON.stringify(DATA, null, 2);
+  const blob = new Blob([payload], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'acuerdos-respaldo-'+hoyLocalISO()+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  Arranque
+// ============================================================
+window.addEventListener('online', procesarColaPendiente);
+boot();
+</script>
+</body>
+</html>
