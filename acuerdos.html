@@ -271,10 +271,9 @@ nav.tabbar button .ic{font-size:18px}
       <div class="card"><div class="body">
         <h3>🔔 Notificaciones</h3>
         <div id="cfgNotifSinConfigurar" class="hidden">
-          <p class="hint">Pega aquí los datos de tu proyecto de Firebase (una sola vez) para poder recibir avisos aunque tengas la app cerrada.</p>
-          <div class="field"><label>Config de Firebase (el objeto firebaseConfig, en JSON)</label><textarea id="cfgFirebaseJson" rows="4" placeholder='{"apiKey":"...","projectId":"...","messagingSenderId":"...","appId":"..."}'></textarea></div>
-          <div class="field"><label>Clave VAPID (Cloud Messaging ▸ Certificados push web)</label><input type="text" id="cfgVapidKey" placeholder="BN...."></div>
-          <button class="btn secondary" onclick="guardarFirebaseConfigUI()">💾 Guardar configuración</button>
+          <p class="hint">Falta un solo dato (una sola vez): la clave VAPID de tu proyecto de Firebase — Configuración del proyecto ▸ Cloud Messaging ▸ Certificados push web.</p>
+          <div class="field"><label>Clave VAPID</label><input type="text" id="cfgVapidKey" placeholder="BN...."></div>
+          <button class="btn secondary" onclick="guardarFirebaseConfigUI()">💾 Guardar</button>
         </div>
         <div id="cfgNotifConfigurada" class="hidden">
           <p class="hint" id="cfgNotifEstado">Configurado.</p>
@@ -1330,8 +1329,23 @@ function exportarRespaldo(){
 //  que tocar el código. Lo secreto (la cuenta de servicio) vive solo en
 //  Propiedades del script de Apps Script, nunca aquí.
 // ============================================================
+// No es secreto — la apiKey de un firebaseConfig web está pensada para
+// viajar en el frontend (la seguridad real vive del lado del servidor,
+// en las reglas de Firebase / en las Propiedades del script de Apps
+// Script para el envío). Se hornea aquí para no tener que pegarla a mano.
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB8fdZ3EE1PasLYEJYaOUPUejiCQslKVpQ",
+  authDomain: "acuerdos-b712d.firebaseapp.com",
+  projectId: "acuerdos-b712d",
+  storageBucket: "acuerdos-b712d.firebasestorage.app",
+  messagingSenderId: "435781810013",
+  appId: "1:435781810013:web:8e3cb395964d204dea5ab4"
+};
 function cargarFirebaseConfig(){
-  try{ return JSON.parse(localStorage.getItem('acuerdos_firebase_config')||'null'); }catch(e){ return null; }
+  try{
+    const guardada = JSON.parse(localStorage.getItem('acuerdos_firebase_config')||'null');
+    return guardada || DEFAULT_FIREBASE_CONFIG;
+  }catch(e){ return DEFAULT_FIREBASE_CONFIG; }
 }
 function renderConfigNotificaciones(){
   const cfg = cargarFirebaseConfig();
@@ -1350,15 +1364,10 @@ function renderConfigNotificaciones(){
   }
 }
 function guardarFirebaseConfigUI(){
-  const raw = document.getElementById('cfgFirebaseJson').value.trim();
   const vapid = document.getElementById('cfgVapidKey').value.trim();
   if(!vapid){ showToast('Falta la clave VAPID'); return; }
-  let cfg;
-  try{ cfg = JSON.parse(raw); }catch(e){ showToast('El JSON de Firebase no es válido'); return; }
-  if(!cfg.apiKey || !cfg.projectId){ showToast('Ese JSON no parece un firebaseConfig completo'); return; }
-  localStorage.setItem('acuerdos_firebase_config', JSON.stringify(cfg));
   localStorage.setItem('acuerdos_vapid_key', vapid);
-  showToast('Configuración guardada');
+  showToast('Guardado');
   renderConfigNotificaciones();
 }
 function borrarFirebaseConfigUI(){
