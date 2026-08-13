@@ -269,6 +269,23 @@ nav.tabbar button .ic{font-size:18px}
       </div></div>
 
       <div class="card"><div class="body">
+        <h3>🔔 Notificaciones</h3>
+        <div id="cfgNotifSinConfigurar" class="hidden">
+          <p class="hint">Pega aquí los datos de tu proyecto de Firebase (una sola vez) para poder recibir avisos aunque tengas la app cerrada.</p>
+          <div class="field"><label>Config de Firebase (el objeto firebaseConfig, en JSON)</label><textarea id="cfgFirebaseJson" rows="4" placeholder='{"apiKey":"...","projectId":"...","messagingSenderId":"...","appId":"..."}'></textarea></div>
+          <div class="field"><label>Clave VAPID (Cloud Messaging ▸ Certificados push web)</label><input type="text" id="cfgVapidKey" placeholder="BN...."></div>
+          <button class="btn secondary" onclick="guardarFirebaseConfigUI()">💾 Guardar configuración</button>
+        </div>
+        <div id="cfgNotifConfigurada" class="hidden">
+          <p class="hint" id="cfgNotifEstado">Configurado.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="activarNotificaciones()" id="cfgBtnActivarNotif">🔔 Activar en este dispositivo</button>
+            <button class="btn ghost small" onclick="borrarFirebaseConfigUI()">🗑 Quitar configuración</button>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="body">
         <h3>Datos y versión</h3>
         <p class="hint">Versión: <b id="cfgVersion"></b>
           <button class="btn ghost small" style="margin-left:8px" onclick="forceReloadApp()">🔄 Forzar actualización</button>
@@ -1061,6 +1078,7 @@ function renderConfig(){
   document.getElementById('cfgUsuarioActivo').textContent = usuarioActivo.Nombre;
   document.getElementById('cfgVersion').textContent = BUILD_VERSION;
   document.getElementById('cfgSheetLink').innerHTML = SHEET_URL ? `<a href="${SHEET_URL}" target="_blank" rel="noopener">📄 Ver mis datos (Google Sheet)</a>` : '';
+  renderConfigNotificaciones();
 
   document.getElementById('cfgUsuariosLista').innerHTML = usuariosActivos().map(u=>`
     <div class="userlist-row">
@@ -1303,6 +1321,95 @@ function exportarRespaldo(){
   a.href = url; a.download = 'acuerdos-respaldo-'+hoyLocalISO()+'.json';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  Notificaciones push (Firebase Cloud Messaging)
+//  El firebaseConfig y la clave VAPID no son secretos (están pensados
+//  para vivir en el frontend) — se guardan en localStorage para no tener
+//  que tocar el código. Lo secreto (la cuenta de servicio) vive solo en
+//  Propiedades del script de Apps Script, nunca aquí.
+// ============================================================
+function cargarFirebaseConfig(){
+  try{ return JSON.parse(localStorage.getItem('acuerdos_firebase_config')||'null'); }catch(e){ return null; }
+}
+function renderConfigNotificaciones(){
+  const cfg = cargarFirebaseConfig();
+  const vapid = localStorage.getItem('acuerdos_vapid_key');
+  const sinConfigurar = document.getElementById('cfgNotifSinConfigurar');
+  const configurada = document.getElementById('cfgNotifConfigurada');
+  if(cfg && vapid){
+    sinConfigurar.classList.add('hidden');
+    configurada.classList.remove('hidden');
+    const activo = !!localStorage.getItem('acuerdos_push_token');
+    document.getElementById('cfgNotifEstado').textContent = activo ? '✅ Activadas en este dispositivo.' : 'Configurado — falta activarlas en este dispositivo.';
+    document.getElementById('cfgBtnActivarNotif').textContent = activo ? '🔔 Ya activadas (volver a activar)' : '🔔 Activar en este dispositivo';
+  } else {
+    sinConfigurar.classList.remove('hidden');
+    configurada.classList.add('hidden');
+  }
+}
+function guardarFirebaseConfigUI(){
+  const raw = document.getElementById('cfgFirebaseJson').value.trim();
+  const vapid = document.getElementById('cfgVapidKey').value.trim();
+  if(!vapid){ showToast('Falta la clave VAPID'); return; }
+  let cfg;
+  try{ cfg = JSON.parse(raw); }catch(e){ showToast('El JSON de Firebase no es válido'); return; }
+  if(!cfg.apiKey || !cfg.projectId){ showToast('Ese JSON no parece un firebaseConfig completo'); return; }
+  localStorage.setItem('acuerdos_firebase_config', JSON.stringify(cfg));
+  localStorage.setItem('acuerdos_vapid_key', vapid);
+  showToast('Configuración guardada');
+  renderConfigNotificaciones();
+}
+function borrarFirebaseConfigUI(){
+  confirmarEliminar('Se quita la configuración de Firebase de este dispositivo (las notificaciones dejan de llegar aquí).', ()=>{
+    localStorage.removeItem('acuerdos_firebase_config');
+    localStorage.removeItem('acuerdos_vapid_key');
+    localStorage.removeItem('acuerdos_push_token');
+    renderConfigNotificaciones();
+  });
+}
+function cargarFirebaseSDK(){
+  return new Promise((resolve, reject)=>{
+    if(window.firebase && window.firebase.messaging){ resolve(); return; }
+    const s1 = document.createElement('script');
+    s1.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+    s1.onload = ()=>{
+      const s2 = document.createElement('script');
+      s2.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js';
+      s2.onload = resolve; s2.onerror = ()=>reject(new Error('No se pudo cargar Firebase Messaging'));
+      document.head.appendChild(s2);
+    };
+    s1.onerror = ()=>reject(new Error('No se pudo cargar Firebase'));
+    document.head.appendChild(s1);
+  });
+}
+async function activarNotificaciones(){
+  const cfg = cargarFirebaseConfig();
+  const vapid = localStorage.getItem('acuerdos_vapid_key');
+  if(!cfg || !vapid){ showToast('Primero guarda la configuración de Firebase'); return; }
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){ showToast('Este navegador no soporta notificaciones'); return; }
+  const btn = document.getElementById('cfgBtnActivarNotif');
+  btn.disabled = true; btn.textContent = 'Activando…';
+  try{
+    const permiso = await Notification.requestPermission();
+    if(permiso!=='granted'){ showToast('No diste permiso de notificaciones'); return; }
+    await cargarFirebaseSDK();
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    const messaging = firebase.messaging();
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await messaging.getToken({ vapidKey: vapid, serviceWorkerRegistration: swReg });
+    if(!token){ showToast('No se pudo obtener el token de notificaciones'); return; }
+    localStorage.setItem('acuerdos_push_token', token);
+    const r = await apiPost('guardarToken', { token, usuario: usuarioActivo?usuarioActivo.ID:'' });
+    if(r && r.ok) showToast('Notificaciones activadas 🔔');
+    else showToast('Se obtuvo el token pero no se pudo guardar en el servidor: '+((r&&r.error)||'sin conexión'));
+  }catch(e){
+    showToast('No se pudo activar: '+e.message);
+  }finally{
+    btn.disabled = false;
+    renderConfigNotificaciones();
+  }
 }
 
 // ============================================================
