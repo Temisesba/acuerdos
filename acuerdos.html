@@ -67,6 +67,8 @@ nav.tabbar button .ic{font-size:18px}
 .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .searchbar{display:flex;gap:8px}
 .searchbar input{flex:1}
+.filtros-row{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.filtros-row select{flex:1;min-width:84px;font-size:12.5px;padding:8px 6px}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(20,25,24,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .modal{background:var(--bg-card);border-radius:var(--radius);padding:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:var(--shadow)}
@@ -201,10 +203,12 @@ nav.tabbar button .ic{font-size:18px}
     <div id="screen-acuerdos" class="screen">
       <h2>🤝 Acuerdos y eventos</h2>
       <div class="searchbar"><input type="text" id="acBuscar" placeholder="Buscar…" oninput="renderAcuerdos()"></div>
-      <div class="chips" id="acChipsTipo"></div>
-      <div class="chips" id="acChipsEstado"></div>
-      <div class="chips" id="acChipsCategoria"></div>
-      <select id="acFiltroPersona" onchange="renderAcuerdos()"></select>
+      <div class="filtros-row">
+        <select id="acFiltroTipo" onchange="filtroTipo=this.value;renderAcuerdos()"></select>
+        <select id="acFiltroEstado" onchange="filtroEstado=this.value;renderAcuerdos()"></select>
+        <select id="acFiltroCategoria" onchange="filtroCategoria=this.value;renderAcuerdos()"></select>
+        <select id="acFiltroPersona" onchange="renderAcuerdos()"></select>
+      </div>
       <div id="acLista" style="margin-top:12px"></div>
       <button class="btn block" style="margin-top:14px" onclick="abrirEditorAcuerdo(null)">➕ Nuevo</button>
     </div>
@@ -740,13 +744,19 @@ function pasaFiltroEstado(a){
 }
 function pasaFiltroTipo(a){ return filtroTipo==='todos' || a.Tipo===filtroTipo; }
 function renderAcuerdos(){
-  document.getElementById('acChipsTipo').innerHTML = CHIPS_TIPO.map(c=>
-    `<button class="chip ${filtroTipo===c.v?'active':''}" onclick="filtroTipo='${c.v}';renderAcuerdos()">${c.label}</button>`).join('');
-  document.getElementById('acChipsEstado').innerHTML = CHIPS_ESTADO.map(c=>
-    `<button class="chip ${filtroEstado===c.v?'active':''}" onclick="filtroEstado='${c.v}';renderAcuerdos()">${c.label}</button>`).join('');
+  const selTipo = document.getElementById('acFiltroTipo');
+  selTipo.innerHTML = CHIPS_TIPO.map(c=>`<option value="${c.v}">${c.label}</option>`).join('');
+  selTipo.value = filtroTipo;
+
+  const selEstado = document.getElementById('acFiltroEstado');
+  selEstado.innerHTML = CHIPS_ESTADO.map(c=>`<option value="${c.v}">${c.label}</option>`).join('');
+  selEstado.value = filtroEstado;
+
   const cats = categoriasOrdenadas();
-  document.getElementById('acChipsCategoria').innerHTML = `<button class="chip ${filtroCategoria==='todas'?'active':''}" onclick="filtroCategoria='todas';renderAcuerdos()">Todas</button>` +
-    cats.map(c=>`<button class="chip ${filtroCategoria===c.ID?'active':''}" onclick="filtroCategoria='${c.ID}';renderAcuerdos()">${c.Emoji} ${escAttr(c.Nombre)}</button>`).join('');
+  const selCat = document.getElementById('acFiltroCategoria');
+  selCat.innerHTML = `<option value="todas">Todas las categorías</option>` +
+    cats.map(c=>`<option value="${c.ID}">${c.Emoji} ${escAttr(c.Nombre)}</option>`).join('');
+  selCat.value = filtroCategoria;
 
   const selPersona = document.getElementById('acFiltroPersona');
   const valPrevio = selPersona.value || 'todas';
