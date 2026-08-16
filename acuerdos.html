@@ -1068,9 +1068,44 @@ function nombrePersonaUsuario(usuarioId){
   return u ? u.Nombre : 'alguien';
 }
 let segFotoTemp = null;
+// Cámaras Samsung (y algunas iPhone) guardan fotos en HEIC/HEIF por
+// default para ahorrar espacio — ningún navegador Android las puede leer
+// directo en un <img>/<canvas>, hay que convertirlas primero.
+function esHeic(file){
+  return /heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
+}
+function cargarHeic2Any(){
+  return new Promise((resolve, reject)=>{
+    if(window.heic2any){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    s.onload = resolve;
+    s.onerror = ()=>reject(new Error('No se pudo cargar el conversor de HEIC'));
+    document.head.appendChild(s);
+  });
+}
 async function subirFotoSeguimiento(fileList){
   if(!fileList || !fileList.length) return;
-  const resized = await resizeImageFile(fileList[0], 1280, 0.85);
+  const cont = document.getElementById('segFotoPreview');
+  let archivo = fileList[0];
+  try{
+    if(esHeic(archivo)){
+      cont.innerHTML = '<p class="hint">Convirtiendo foto (formato de Samsung)…</p>';
+      await conTiempoLimite(cargarHeic2Any(), 15000, 'No se pudo cargar el conversor de HEIC');
+      const convertido = await conTiempoLimite(
+        heic2any({ blob: archivo, toType: 'image/jpeg', quality: 0.85 }),
+        20000, 'La conversión de la foto tardó demasiado'
+      );
+      archivo = Array.isArray(convertido) ? convertido[0] : convertido;
+    }
+    const resized = await resizeImageFile(archivo, 1280, 0.85);
+    mostrarRecorteManualSeguimiento(resized);
+  }catch(e){
+    cont.innerHTML = '';
+    showToast('No se pudo procesar la foto: '+e.message+' — prueba cambiando el ajuste de la cámara a JPEG (Cámara ▸ Ajustes ▸ Formatos eficientes, desactivarlo)');
+  }
+}
+function mostrarRecorteManualSeguimiento(resized){
   mostrarRecorteManual(resized, {
     containerId: 'segFotoPreview',
     onDescartar: ()=>{ document.getElementById('segFotoPreview').innerHTML=''; },
