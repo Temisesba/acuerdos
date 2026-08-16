@@ -152,11 +152,30 @@ nav.tabbar button .ic{font-size:18px}
 
 .mejora-row{padding:10px 0;border-bottom:1px solid var(--border)}
 .mejora-row:last-child{border-bottom:none}
-.mejora-row .top{display:flex;align-items:center;gap:6px}
-.mejora-row input[type=text]{flex:1;border:none;background:transparent;padding:4px 0}
+.mejora-row .top{display:flex;align-items:flex-start;gap:6px}
+.mejora-row textarea{flex:1;border:none;background:transparent;padding:4px 0;resize:none;overflow:hidden;font:inherit;color:inherit;min-height:24px}
 .mejora-row .fecha{font-size:11px;color:var(--text-soft);margin-top:2px}
 
 .inline-add{display:flex;gap:6px;margin-top:6px}
+
+.crop-wrap{position:relative;max-width:100%;width:fit-content;margin:14px auto 0;border-radius:var(--radius);overflow:hidden;touch-action:none}
+.crop-wrap img{display:block;max-width:100%;max-height:60vh;width:auto;height:auto;user-select:none;-webkit-user-drag:none}
+.crop-box{position:absolute;border:2px solid var(--accent);box-shadow:0 0 0 9999px rgba(0,0,0,.45);cursor:move;touch-action:none}
+.crop-handle{position:absolute;width:22px;height:22px;background:var(--accent);border:2px solid #fff;border-radius:50%;transform:translate(-50%,-50%);touch-action:none}
+.crop-handle[data-corner="nw"]{left:0;top:0;cursor:nwse-resize}
+.crop-handle[data-corner="ne"]{left:100%;top:0;cursor:nesw-resize}
+.crop-handle[data-corner="sw"]{left:0;top:100%;cursor:nesw-resize}
+.crop-handle[data-corner="se"]{left:100%;top:100%;cursor:nwse-resize}
+
+.foto-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin:6px 0}
+.foto-strip img{width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;cursor:zoom-in}
+.foto-editor-item{position:relative;flex:none}
+.foto-editor-item img{width:72px;height:72px;object-fit:cover;border-radius:8px;display:block}
+.foto-editor-item .quitar{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;line-height:1;padding:0}
+
+.seg-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.seg-row:last-child{border-bottom:none}
+.seg-row .meta{font-size:11px;color:var(--text-soft);margin-top:4px;display:flex;justify-content:space-between;align-items:center}
 .check-list{border:1px solid var(--border);border-radius:10px;padding:6px 10px;max-height:160px;overflow-y:auto}
 .chk-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px}
 .chk-row input[type=checkbox]{width:auto;flex:none}
@@ -309,7 +328,7 @@ nav.tabbar button .ic{font-size:18px}
 let GAS_URL = localStorage.getItem('acuerdos_gas_url') || '';
 let SHEET_URL = '';
 const BUILD_VERSION = 'Confianza';
-let DATA = { usuarios:[], personas:[], categorias:[], acuerdos:[], mejoras:[], config:[] };
+let DATA = { usuarios:[], personas:[], categorias:[], acuerdos:[], mejoras:[], seguimientos:[], config:[] };
 let usuarioActivo = null;
 
 let filtroEstado = 'todos';
@@ -323,6 +342,11 @@ function esVerdadero(v){ return v===true || String(v).toLowerCase()==='true'; }
 function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2)); }
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window._toastT); window._toastT=setTimeout(()=>t.classList.remove('show'),2800); }
 function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Para texto DENTRO de un elemento (ej. contenido de un <textarea>), no
+// para atributos — ahí las comillas no hacen falta escaparlas y si se
+// escapan con escAttr se ven mal (aparece "&quot;" literal).
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function autoAlturaTextarea(el){ el.style.height='auto'; el.style.height=(el.scrollHeight)+'px'; }
 function hoyLocalISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtFecha(iso){ if(!iso) return ''; const [y,m,d] = String(iso).slice(0,10).split('-'); return d && m && y ? d+'/'+m+'/'+y : iso; }
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -413,7 +437,7 @@ function cambiarUrlBackend(){
 function normalizeData(d){
   return {
     usuarios: d.usuarios||[], personas: d.personas||[], categorias: d.categorias||[],
-    acuerdos: d.acuerdos||[], mejoras: d.mejoras||[], config: d.config||[]
+    acuerdos: d.acuerdos||[], mejoras: d.mejoras||[], seguimientos: d.seguimientos||[], config: d.config||[]
   };
 }
 
@@ -869,7 +893,7 @@ function abrirEditorAcuerdo(id, fechaSugerida){
         </select>
       </div>
     </div>
-    <div class="field"><label>Detalles (opcional)</label><textarea id="edDetalles" rows="3" placeholder="Notas, contexto…">${a?escAttr(a.Detalles):''}</textarea></div>
+    <div class="field"><label>Detalles (opcional)</label><textarea id="edDetalles" rows="3" placeholder="Notas, contexto…">${a?escHtml(a.Detalles):''}</textarea></div>
     <div class="setup-err" id="edErr"></div>
     <div class="actions">
       <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
@@ -968,12 +992,25 @@ function abrirDetalleAcuerdo(id){
     ${recurrente}
     ${detalles}
     ${botonesEstado ? `<div class="actions" style="justify-content:flex-start">${botonesEstado}</div>` : ''}
+    <h3 style="margin-top:18px;font-size:15px">📝 Notas y evidencia</h3>
+    <p class="hint">En qué quedaron — separado del compromiso en sí, esto no se edita, se va agregando.</p>
+    <div id="segLista"></div>
+    <div class="field">
+      <textarea id="segTexto" rows="2" placeholder="Escribe una nota…"></textarea>
+      <div id="segFotoPreview"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">
+        <label class="btn ghost small" style="cursor:pointer">📷 Foto<input type="file" accept="image/*" style="display:none" onchange="subirFotoSeguimiento(this.files)"></label>
+        <button class="btn small" style="flex:1" onclick="agregarSeguimiento('${a.ID}')">➕ Agregar nota</button>
+      </div>
+    </div>
     <div class="actions">
       <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Cerrar</button>
       <button class="btn plum" onclick="cerrarModales();abrirEditorAcuerdo('${a.ID}')">✏️ Editar</button>
       <button class="btn danger" onclick="eliminarAcuerdo('${a.ID}')">🗑 Eliminar</button>
     </div>`;
   abrirModal(html);
+  segFotoTemp = null;
+  renderSeguimientos(a.ID);
 }
 async function marcarEstadoAcuerdo(id, estado){
   const a = DATA.acuerdos.find(x=>x.ID===id); if(!a) return;
@@ -1004,6 +1041,182 @@ function eliminarAcuerdo(id){
     renderAllScreens();
     await apiPost('saveRow', { table:'ACUERDOS', row:a });
   });
+}
+
+// ============================================================
+//  Bitácora del acuerdo: notas + foto de evidencia
+// ============================================================
+function seguimientosDelAcuerdo(acuerdoId){
+  return DATA.seguimientos.filter(s=>s.AcuerdoID===acuerdoId).sort((a,b)=>(a.Fecha||'').localeCompare(b.Fecha||''));
+}
+function renderSeguimientos(acuerdoId){
+  const cont = document.getElementById('segLista');
+  if(!cont) return;
+  const lista = seguimientosDelAcuerdo(acuerdoId);
+  cont.innerHTML = lista.length ? lista.map(s=>`
+    <div class="seg-row">
+      ${s.Texto ? `<div>${escHtml(s.Texto)}</div>` : ''}
+      ${s.FotoURL ? `<div class="foto-strip"><img src="${s.FotoURL}" onclick="verFotoGrande('${s.FotoURL}')"></div>` : ''}
+      <div class="meta">
+        <span>${escAttr(nombrePersonaUsuario(s.Usuario))} · ${fmtFecha(s.Fecha)}</span>
+        <button class="btn ghost small" onclick="eliminarSeguimiento('${s.ID}','${acuerdoId}')">🗑</button>
+      </div>
+    </div>`).join('') : '<p class="hint">Todavía no hay notas.</p>';
+}
+function nombrePersonaUsuario(usuarioId){
+  const u = DATA.usuarios.find(x=>x.ID===usuarioId);
+  return u ? u.Nombre : 'alguien';
+}
+let segFotoTemp = null;
+async function subirFotoSeguimiento(fileList){
+  if(!fileList || !fileList.length) return;
+  const resized = await resizeImageFile(fileList[0], 1280, 0.85);
+  mostrarRecorteManual(resized, {
+    containerId: 'segFotoPreview',
+    onDescartar: ()=>{ document.getElementById('segFotoPreview').innerHTML=''; },
+    onListo: async (recortada)=>{
+      document.getElementById('segFotoPreview').innerHTML = '<p class="hint">Subiendo foto…</p>';
+      const r = await apiPost('uploadImage', { imageBase64: recortada.base64, mimeType: recortada.mimeType, fileName:'acuerdos-'+Date.now()+'.jpg' });
+      if(r.ok){
+        segFotoTemp = r.url;
+        document.getElementById('segFotoPreview').innerHTML = `<div class="foto-editor-item"><img src="${r.url}"><button type="button" class="quitar" onclick="event.stopPropagation();segFotoTemp=null;document.getElementById('segFotoPreview').innerHTML='';">✕</button></div>`;
+      } else {
+        document.getElementById('segFotoPreview').innerHTML = '';
+        showToast('No se pudo subir la foto: '+(r.error||'sin conexión'));
+      }
+    }
+  });
+}
+async function agregarSeguimiento(acuerdoId){
+  const texto = document.getElementById('segTexto').value.trim();
+  if(!texto && !segFotoTemp){ showToast('Escribe algo o agrega una foto'); return; }
+  const row = { ID: uid(), AcuerdoID: acuerdoId, Texto: texto, FotoURL: segFotoTemp||'', Usuario: usuarioActivo?usuarioActivo.ID:'', Fecha: hoyLocalISO() };
+  DATA.seguimientos.push(row);
+  localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+  document.getElementById('segTexto').value = '';
+  document.getElementById('segFotoPreview').innerHTML = '';
+  segFotoTemp = null;
+  renderSeguimientos(acuerdoId);
+  const r = await apiPost('saveRow', { table:'SEGUIMIENTOS', row });
+  if(!r.ok) showToast('No se pudo guardar en el servidor: '+(r.error||'sin conexión'));
+}
+function eliminarSeguimiento(id, acuerdoId){
+  confirmarEliminar('Se borra esta nota para siempre.', async ()=>{
+    const idx = DATA.seguimientos.findIndex(x=>x.ID===id);
+    if(idx>=0) DATA.seguimientos.splice(idx,1);
+    localStorage.setItem('acuerdos_data_cache', JSON.stringify(DATA));
+    renderSeguimientos(acuerdoId);
+    await apiPost('deleteRow', { table:'SEGUIMIENTOS', id });
+  });
+}
+function verFotoGrande(url){
+  if(!url) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<img src="${url}" style="max-width:100%;max-height:88vh;border-radius:var(--radius);display:block">`;
+  overlay.addEventListener('click', ()=> overlay.remove());
+  document.body.appendChild(overlay);
+}
+
+// ============================================================
+//  Fotos: recorte manual antes de subir (mismo patrón que Comidas)
+// ============================================================
+function resizeImageFile(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w >= h){ h = Math.round(h*maxDim/w); w = maxDim; } else { w = Math.round(w*maxDim/h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({ dataUrl, width:w, height:h, base64: dataUrl.split(',')[1], mimeType:'image/jpeg', canvas });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+let cropState = null;
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function mostrarRecorteManual(resized, { containerId, onListo, onDescartar }){
+  cropState = { resized, containerId, onListo, onDescartar, rect: { x:0.06, y:0.06, w:0.88, h:0.88 }, mode:null, startPointer:null, startRect:null };
+  document.getElementById(containerId).innerHTML = `
+    <div class="crop-wrap" id="cropWrap">
+      <img id="cropImg" src="${resized.dataUrl}" draggable="false">
+      <div class="crop-box" id="cropBox">
+        <div class="crop-handle" data-corner="nw"></div>
+        <div class="crop-handle" data-corner="ne"></div>
+        <div class="crop-handle" data-corner="sw"></div>
+        <div class="crop-handle" data-corner="se"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button type="button" class="btn secondary" onclick="cropState.onDescartar()">Descartar foto</button>
+      <button type="button" class="btn" onclick="confirmarRecorte()">✂️ Recortar y usar</button>
+    </div>`;
+  posicionarCropBox();
+  document.getElementById('cropBox').addEventListener('pointerdown', onCropPointerDown);
+  window.addEventListener('pointermove', onCropPointerMove);
+  window.addEventListener('pointerup', onCropPointerUp);
+}
+function posicionarCropBox(){
+  const box = document.getElementById('cropBox'); if(!box) return;
+  const r = cropState.rect;
+  box.style.left = (r.x*100)+'%'; box.style.top = (r.y*100)+'%';
+  box.style.width = (r.w*100)+'%'; box.style.height = (r.h*100)+'%';
+}
+function onCropPointerDown(e){
+  const handle = e.target.closest('.crop-handle');
+  cropState.mode = handle ? handle.dataset.corner : 'move';
+  cropState.startPointer = { x:e.clientX, y:e.clientY };
+  cropState.startRect = { ...cropState.rect };
+  e.preventDefault();
+}
+function onCropPointerMove(e){
+  if(!cropState || !cropState.mode) return;
+  const wrap = document.getElementById('cropWrap'); if(!wrap) return;
+  const bounds = wrap.getBoundingClientRect();
+  const dx = (e.clientX - cropState.startPointer.x)/bounds.width;
+  const dy = (e.clientY - cropState.startPointer.y)/bounds.height;
+  let { x, y, w, h } = cropState.startRect;
+  const mode = cropState.mode;
+  if(mode==='move'){
+    x = clamp(x+dx, 0, 1-w); y = clamp(y+dy, 0, 1-h);
+  } else {
+    if(mode.includes('w')){ const nx = clamp(x+dx, 0, x+w-0.05); w = w+(x-nx); x = nx; }
+    if(mode.includes('e')){ w = clamp(w+dx, 0.05, 1-x); }
+    if(mode.includes('n')){ const ny = clamp(y+dy, 0, y+h-0.05); h = h+(y-ny); y = ny; }
+    if(mode.includes('s')){ h = clamp(h+dy, 0.05, 1-y); }
+  }
+  cropState.rect = { x, y, w, h };
+  posicionarCropBox();
+}
+function onCropPointerUp(){ if(cropState) cropState.mode = null; }
+function cleanupCropListeners(){
+  window.removeEventListener('pointermove', onCropPointerMove);
+  window.removeEventListener('pointerup', onCropPointerUp);
+}
+function confirmarRecorte(){
+  const { resized, rect, onListo } = cropState;
+  cleanupCropListeners();
+  const sx = Math.round(rect.x * resized.width);
+  const sy = Math.round(rect.y * resized.height);
+  const sw = Math.max(1, Math.round(rect.w * resized.width));
+  const sh = Math.max(1, Math.round(rect.h * resized.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = sw; canvas.height = sh;
+  canvas.getContext('2d').drawImage(resized.canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  const recortada = { dataUrl, width: sw, height: sh, base64: dataUrl.split(',')[1], mimeType:'image/jpeg' };
+  onListo(recortada);
 }
 
 // ============================================================
@@ -1099,12 +1312,13 @@ function renderConfig(){
   document.getElementById('cfgMejorasLista').innerHTML = mejoras.length ? mejoras.map(m=>`
     <div class="mejora-row">
       <div class="top">
-        <input type="text" value="${escAttr(m.Texto)}" onchange="editarMejoraTexto('${m.ID}',this.value)">
+        <textarea rows="1" oninput="autoAlturaTextarea(this)" onchange="editarMejoraTexto('${m.ID}',this.value)">${escHtml(m.Texto)}</textarea>
         <button class="btn ghost small" onclick="copiarMejora('${m.ID}')">📋</button>
         <button class="btn ghost small" onclick="eliminarMejora('${m.ID}')">🗑</button>
       </div>
       <div class="fecha">${fmtFecha(m.Fecha)}</div>
     </div>`).join('') : '<p class="hint">Sin ideas guardadas todavía.</p>';
+  document.querySelectorAll('.mejora-row textarea').forEach(autoAlturaTextarea);
 
   renderPapeleraConfig();
 }
@@ -1377,23 +1591,41 @@ function cargarFirebaseSDK(){
     document.head.appendChild(s1);
   });
 }
+// Nunca deja el botón pegado: cada paso tiene su propio límite de tiempo,
+// y el texto del botón va cambiando para saber en qué paso se atoró si
+// algo falla (útil para diagnosticar a distancia).
+function conTiempoLimite(promesa, ms, mensaje){
+  return Promise.race([
+    promesa,
+    new Promise((_, reject)=>setTimeout(()=>reject(new Error(mensaje)), ms))
+  ]);
+}
 async function activarNotificaciones(){
   const cfg = cargarFirebaseConfig();
   const vapid = DEFAULT_VAPID_KEY;
-  if(!('Notification' in window) || !('serviceWorker' in navigator)){ showToast('Este navegador no soporta notificaciones'); return; }
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){ showToast('Este navegador no soporta notificaciones (¿estás en un navegador dentro de otra app, como Facebook o Instagram? Ábrela en Chrome directo)'); return; }
   const btn = document.getElementById('cfgBtnActivarNotif');
-  btn.disabled = true; btn.textContent = 'Activando…';
+  btn.disabled = true; btn.textContent = 'Pidiendo permiso…';
   try{
     const permiso = await Notification.requestPermission();
-    if(permiso!=='granted'){ showToast('No diste permiso de notificaciones'); return; }
-    await cargarFirebaseSDK();
+    if(permiso!=='granted'){ showToast('No diste permiso de notificaciones (revisa que no esté bloqueado en los ajustes del sitio)'); return; }
+
+    btn.textContent = 'Cargando Firebase…';
+    await conTiempoLimite(cargarFirebaseSDK(), 15000, 'No se pudo cargar Firebase (revisa tu conexión)');
     if(!firebase.apps.length) firebase.initializeApp(cfg);
     const messaging = firebase.messaging();
-    const swReg = await navigator.serviceWorker.ready;
-    const token = await messaging.getToken({ vapidKey: vapid, serviceWorkerRegistration: swReg });
+
+    btn.textContent = 'Registrando dispositivo…';
+    const swReg = await conTiempoLimite(navigator.serviceWorker.ready, 15000, 'El service worker no respondió a tiempo');
+    const token = await conTiempoLimite(
+      messaging.getToken({ vapidKey: vapid, serviceWorkerRegistration: swReg }),
+      15000, 'No se pudo obtener el token de notificaciones (tardó demasiado)'
+    );
     if(!token){ showToast('No se pudo obtener el token de notificaciones'); return; }
+
+    btn.textContent = 'Guardando…';
     localStorage.setItem('acuerdos_push_token', token);
-    const r = await apiPost('guardarToken', { token, usuario: usuarioActivo?usuarioActivo.ID:'' });
+    const r = await conTiempoLimite(apiPost('guardarToken', { token, usuario: usuarioActivo?usuarioActivo.ID:'' }), 15000, 'El servidor tardó demasiado en responder');
     if(r && r.ok) showToast('Notificaciones activadas 🔔');
     else showToast('Se obtuvo el token pero no se pudo guardar en el servidor: '+((r&&r.error)||'sin conexión'));
   }catch(e){
